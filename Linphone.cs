@@ -429,6 +429,26 @@ namespace sipdotnet
 			}
 		}
 
+		public void MakeCallAndRecord (string uri, string filename)
+		{
+			if (linphoneCore == IntPtr.Zero || !running) {
+				if (ErrorEvent != null)
+					ErrorEvent (null, "Cannot make or receive calls when Linphone Core is not working.");
+				return;
+			}
+
+			linphone_call_params_set_record_file (callsDefaultParams, filename);
+
+			IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callsDefaultParams);
+			if (call == IntPtr.Zero) {
+				if (ErrorEvent != null)
+					ErrorEvent (null, "Cannot call.");
+				return;
+			}
+
+			linphone_call_start_recording (call);
+		}
+
 		public void ReceiveCallAndRecord (Call call, string filename)
 		{
 			if (call == null)

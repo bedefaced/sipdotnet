@@ -191,6 +191,22 @@ namespace sipdotnet
 			}
 		}
 
+		public void MakeCallAndRecord (string sipUriOrPhone, string filename)
+		{
+			if (string.IsNullOrEmpty(sipUriOrPhone))
+				throw new ArgumentNullException ("sipUriOrPhone");
+
+			if (string.IsNullOrEmpty(filename))
+				throw new ArgumentNullException ("filename");
+
+			if (lineState == LineState.Free)
+				linphone.MakeCallAndRecord (sipUriOrPhone, filename);
+			else { 
+				if (ErrorEvent != null) 
+					ErrorEvent (null, Error.LineIsBusyError);
+			}
+		}
+
 		public void ReceiveCallAndRecord (Call call, string filename)
 		{
 			if (call == null)
