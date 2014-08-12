@@ -143,7 +143,7 @@ namespace sipdotnet
 
                 case Call.CallState.Error:
                     this.lineState = LineState.Free;
-                    ErrorEvent(null, Error.CallError);
+                    if (ErrorEvent != null) ErrorEvent(null, Error.CallError);
                     if (CallCompletedEvent != null)
                         CallCompletedEvent(call);
                     break;
