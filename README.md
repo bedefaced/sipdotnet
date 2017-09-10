@@ -1,7 +1,7 @@
 sipdotnet
 =========
 
-.NET wrapper for [liblinphone][1] library. You can use it for simple interface for SIP telephony.
+Small .NET wrapper for [liblinphone](http://www.linphone.org/eng/documentation/dev/liblinphone-free-sip-voip-sdk.html) library. You can use it for simple interface for SIP telephony.
 
 Using
 -----
@@ -53,26 +53,17 @@ Requirements
 ------------
 
 * .NET 4.0 framework on Windows or Linux (>= Mono 3.2.8)
-* last available (>= 3.7.0) liblinphone library binaries installed
+* last available (4.1.1) liblinphone library binaries installed
 
 Liblinphone on Windows
 ----------------------
-It can be hardly built from [sources][2] or be gotten from [linphone binaries][3]. On Windows it requires almost all dlls from `bin` directory of linphone. Complete pack of required liblinphone dlls can be downloaded from [here][4].
+Download SDK binaries from [official site](http://www.linphone.org/technical-corner/liblinphone/downloads).
 
 Liblinphone on Linux
 --------------------
-It is good if you build liblinphone from [sources][5] to have last version of liblinphone shared libraries. Note that this will require some components. For example, this is my "multi spell" for Ubuntu 14.04:
-
-    apt-get install g++ git libtool automake autoconf libantlr3c-dev antlr3 make intltool speex libxml2-dev gtk+-2.0-dev libspeexdsp-dev && git clone git://git.linphone.org/linphone.git --recursive && git clone git://git.linphone.org/belle-sip.git && cd belle-sip && ./autogen.sh && ./configure && make && make install && cd ../linphone && ./autogen.sh && ./configure SPEEX_CFLAGS="-L/usr/lib/i386-linux-gnu -lspeex" SPEEX_LIBS="-L/usr/lib/i386-linux-gnu -lspeex" --without--ffmpeg --disable-video && make && make install
+1) Install [Mono](http://www.mono-project.com/download/#download-lin)
+2) Build manually from [sources](https://github.com/BelledonneCommunications/linphone), or use [my bash script](https://gist.github.com/bedefaced/3dc4e58c700dada43054f49a3053dcad) for Ubuntu 16.04.
 
 License
 -------
-[LGPLv3][6] (see `LICENSE` file)
-
-
-  [1]: http://www.linphone.org/eng/documentation/dev/liblinphone-free-sip-voip-sdk.html
-  [2]: http://www.linphone.org/eng/download/git.html
-  [3]: http://www.linphone.org/eng/download/packages/
-  [4]: https://mega.co.nz/#!4hIiFCIC!4RdkaxtRDMg-FisoT8L-4Asd7YEMuwFpfV_bZF0SX4c
-  [5]: http://www.linphone.org/eng/download/git.html
-  [6]: http://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License
+[LGPLv3](http://en.wikipedia.org/wiki/GNU_Lesser_General_Public_License) (see `LICENSE` file)
