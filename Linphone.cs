@@ -7,206 +7,565 @@ namespace sipdotnet
 {
 	public class Linphone
 	{
-	#region Import
 
-		#if (WINDOWS)
-		const string LIBNAME = "liblinphone-6.dll";
-		#else
-		const string LIBNAME = "liblinphone";
-		#endif
+        #if (WINDOWS)
+                const string LIBNAME = "linphone.dll";
+        #else
+		        const string LIBNAME = "liblinphone";
+        #endif
 
-		// from /usr/local/include/linphone/linphonecore.h
+        #region Import
 
-		const int LC_SIP_TRANSPORT_RANDOM = -1;
-		const int LC_SIP_TRANSPORT_DISABLED = 0;
+        /// <summary>
+        /// Disable a sip transport
+        /// </summary>
+        const int LC_SIP_TRANSPORT_DISABLED = 0;
 
+        /// <summary>
+        /// Randomly chose a sip port for this transport
+        /// </summary>
+        const int LC_SIP_TRANSPORT_RANDOM = -1;
+
+        /// <summary>
+        /// Don't create any server socket for this transport, ie don't bind on any port
+        /// </summary>
+        const int LC_SIP_TRANSPORT_DONTBIND = -2;
+
+        /// <summary>
+        /// Linphone core SIP transport ports
+        /// http://www.linphone.org/docs/liblinphone/struct__LinphoneSipTransports.html
+        /// </summary>
 		struct LCSipTransports
 		{
-			public int udp_port; // udp port to listening on, negative value if not set
-			public int tcp_port; // tcp port to listening on, negative value if not set
-			public int dtls_port; // dtls port to listening on, negative value if not set
-			public int tls_port; // tls port to listening on, negative value if not set
+            /// <summary>
+            /// UDP port to listening on, negative value if not set
+            /// </summary>
+			public int udp_port;
+
+            /// <summary>
+            /// TCP port to listening on, negative value if not set
+            /// </summary>
+			public int tcp_port;
+
+            /// <summary>
+            /// DTLS port to listening on, negative value if not set
+            /// </summary>
+			public int dtls_port;
+
+            /// <summary>
+            /// TLS port to listening on, negative value if not set
+            /// </summary>
+			public int tls_port;
 		};
 
+        /// <summary>
+        /// Describes proxy registration states
+        /// http://www.linphone.org/docs/liblinphone/group__proxies.html
+        /// </summary>
 		public enum LinphoneRegistrationState
 		{
-			LinphoneRegistrationNone, // Initial state for registrations
-			LinphoneRegistrationProgress, // Registration is in progress
-			LinphoneRegistrationOk,	// Registration is successful
-			LinphoneRegistrationCleared, // Unregistration succeeded
-			LinphoneRegistrationFailed	// Registration failed
-		};
+            /// <summary>
+            /// Initial state for registrations
+            /// </summary>
+			LinphoneRegistrationNone,
 
+            /// <summary>
+            /// Registration is in progress
+            /// </summary>
+			LinphoneRegistrationProgress,
+
+            /// <summary>
+            /// Registration is successful
+            /// </summary>
+			LinphoneRegistrationOk,
+
+            /// <summary>
+            /// Unregistration succeeded
+            /// </summary>
+			LinphoneRegistrationCleared,
+
+            /// <summary>
+            /// Registration failed
+            /// </summary>
+			LinphoneRegistrationFailed
+        };
+
+        /// <summary>
+        /// Represents the different state a call can reach into
+        /// http://www.linphone.org/docs/liblinphone/group__call__control.html
+        /// </summary>
 		public enum LinphoneCallState
 		{
-			LinphoneCallIdle, // Initial call state
-			LinphoneCallIncomingReceived, // This is a new incoming call
-			LinphoneCallOutgoingInit, // An outgoing call is started
-			LinphoneCallOutgoingProgress, // An outgoing call is in progress
-			LinphoneCallOutgoingRinging, // An outgoing call is ringing at remote end
-			LinphoneCallOutgoingEarlyMedia, // An outgoing call is proposed early media
-			LinphoneCallConnected, // <Connected, the call is answered
-			LinphoneCallStreamsRunning, // The media streams are established and running
-			LinphoneCallPausing, // The call is pausing at the initiative of local end
-			LinphoneCallPaused, // The call is paused, remote end has accepted the pause
-			LinphoneCallResuming, // The call is being resumed by local end
-			LinphoneCallRefered, // <The call is being transfered to another party, resulting in a new outgoing call to follow immediately
-			LinphoneCallError, // The call encountered an error
-			LinphoneCallEnd, // The call ended normally
-			LinphoneCallPausedByRemote, // The call is paused by remote end
-			LinphoneCallUpdatedByRemote, // The call's parameters change is requested by remote end, used for example when video is added by remote
-			LinphoneCallIncomingEarlyMedia, // We are proposing early media to an incoming call
-			LinphoneCallUpdating, // A call update has been initiated by us
-            LinphoneCallReleased // The call object is no more retained by the core
-		};
+            /// <summary>
+            /// Initial call state
+            /// </summary>
+			LinphoneCallIdle,
 
-		struct LinphoneCoreVTable
+            /// <summary>
+            /// This is a new incoming call
+            /// </summary>
+			LinphoneCallIncomingReceived,
+
+            /// <summary>
+            /// An outgoing call is started
+            /// </summary>
+			LinphoneCallOutgoingInit,
+
+            /// <summary>
+            /// An outgoing call is in progress
+            /// </summary>
+			LinphoneCallOutgoingProgress,
+
+            /// <summary>
+            /// An outgoing call is ringing at remote end
+            /// </summary>
+			LinphoneCallOutgoingRinging,
+
+            /// <summary>
+            /// An outgoing call is proposed early media
+            /// </summary>
+			LinphoneCallOutgoingEarlyMedia,
+
+            /// <summary>
+            /// Connected, the call is answered
+            /// </summary>
+			LinphoneCallConnected,
+
+            /// <summary>
+            /// The media streams are established and running
+            /// </summary>
+			LinphoneCallStreamsRunning,
+
+            /// <summary>
+            /// The call is pausing at the initiative of local end
+            /// </summary>
+			LinphoneCallPausing,
+
+            /// <summary>
+            /// The call is paused, remote end has accepted the pause
+            /// </summary>
+			LinphoneCallPaused,
+
+            /// <summary>
+            /// The call is being resumed by local end
+            /// </summary>
+			LinphoneCallResuming,
+
+            /// <summary>
+            /// <The call is being transfered to another party, resulting in a new outgoing call to follow immediately
+            /// </summary>
+			LinphoneCallRefered,
+
+            /// <summary>
+            /// The call encountered an error
+            /// </summary>
+			LinphoneCallError,
+
+            /// <summary>
+            /// The call ended normally
+            /// </summary>
+			LinphoneCallEnd,
+
+            /// <summary>
+            /// The call is paused by remote end
+            /// </summary>
+			LinphoneCallPausedByRemote,
+
+            /// <summary>
+            /// The call's parameters change is requested by remote end, used for example when video is added by remote
+            /// </summary>
+			LinphoneCallUpdatedByRemote,
+
+            /// <summary>
+            /// We are proposing early media to an incoming call
+            /// </summary>
+			LinphoneCallIncomingEarlyMedia,
+
+            /// <summary>
+            /// A call update has been initiated by us
+            /// </summary>
+			LinphoneCallUpdating,
+
+            /// <summary>
+            /// The call object is no more retained by the core
+            /// </summary>
+            LinphoneCallReleased
+        };
+        
+        /// <summary>
+        /// Holds all callbacks that the application should implement. None is mandatory.
+        /// http://www.linphone.org/docs/liblinphone/struct__LinphoneCoreVTable.html
+        /// </summary>
+        struct LinphoneCoreVTable
 		{
-			public IntPtr global_state_changed; //<Notifies global state changes
-			public IntPtr registration_state_changed; // Notifies registration state changes
-			public IntPtr call_state_changed; // Notifies call state changes
-			public IntPtr notify_presence_received; // Notify received presence events
-			public IntPtr new_subscription_requested; // Notify about pending presence subscription request
-			public IntPtr auth_info_requested; // Ask the application some authentication information
-			public IntPtr call_log_updated; // Notifies that call log list has been updated
-			public IntPtr message_received; // A message is received, can be text or external body
-			public IntPtr is_composing_received; // An is-composing notification has been received
-			public IntPtr dtmf_received; // A dtmf has been received received
-			public IntPtr refer_received; // An out of call refer was received
-			public IntPtr call_encryption_changed; // Notifies on change in the encryption of call streams
-			public IntPtr transfer_state_changed; // Notifies when a transfer is in progress
-			public IntPtr buddy_info_updated; // A LinphoneFriend's BuddyInfo has changed
-			public IntPtr call_stats_updated; // Notifies on refreshing of call's statistics.
-			public IntPtr info_received; // Notifies an incoming informational message received.
-			public IntPtr subscription_state_changed; // Notifies subscription state change
-			public IntPtr notify_received; // Notifies a an event notification, see linphone_core_subscribe()
-			public IntPtr publish_state_changed; // Notifies publish state change (only from #LinphoneEvent api)
-			public IntPtr configuring_status; // Notifies configuring status changes
-			public IntPtr display_status; // @deprecated Callback that notifies various events with human readable text.
-			public IntPtr display_message; // @deprecated Callback to display a message to the user
-			public IntPtr display_warning; // @deprecated Callback to display a warning to the user
-			public IntPtr display_url; // @deprecated
-			public IntPtr show; // @deprecated Notifies the application that it should show up
-			public IntPtr text_received; // @deprecated, use #message_received instead <br> A text message has been received
-		};
+            /// <summary>
+            /// Notifies global state changes
+            /// </summary>
+			public IntPtr global_state_changed;
 
-		[DllImport(LIBNAME)]
+            /// <summary>
+            /// Notifies registration state changes
+            /// </summary>
+			public IntPtr registration_state_changed;
+
+            /// <summary>
+            /// Notifies call state changes
+            /// </summary>
+			public IntPtr call_state_changed;
+
+            /// <summary>
+            /// Notify received presence events
+            /// </summary>
+			public IntPtr notify_presence_received;
+
+            /// <summary>
+            /// Notify received presence events
+            /// </summary>
+            public IntPtr notify_presence_received_for_uri_or_tel;
+
+            /// <summary>
+            /// Notify about pending presence subscription request
+            /// </summary>
+            public IntPtr new_subscription_requested;
+
+            /// <summary>
+            /// Ask the application some authentication information
+            /// </summary>
+			public IntPtr auth_info_requested;
+
+            /// <summary>
+            /// Ask the application some authentication information
+            /// </summary>
+            public IntPtr authentication_requested;
+
+            /// <summary>
+            /// Notifies that call log list has been updated
+            /// </summary>
+            public IntPtr call_log_updated;
+
+            /// <summary>
+            /// A message is received, can be text or external body
+            /// </summary>
+			public IntPtr message_received;
+
+            /// <summary>
+            /// An encrypted message is received but we can't decrypt it
+            /// </summary>
+            public IntPtr message_received_unable_decrypt;
+
+            /// <summary>
+            /// An is-composing notification has been received
+            /// </summary>
+            public IntPtr is_composing_received;
+
+            /// <summary>
+            /// A dtmf has been received received
+            /// </summary>
+			public IntPtr dtmf_received;
+
+            /// <summary>
+            /// An out of call refer was received
+            /// </summary>
+			public IntPtr refer_received;
+
+            /// <summary>
+            /// Notifies on change in the encryption of call streams
+            /// </summary>
+			public IntPtr call_encryption_changed;
+
+            /// <summary>
+            /// Notifies when a transfer is in progress
+            /// </summary>
+			public IntPtr transfer_state_changed;
+
+            /// <summary>
+            /// A LinphoneFriend's BuddyInfo has changed
+            /// </summary>
+			public IntPtr buddy_info_updated;
+
+            /// <summary>
+            /// Notifies on refreshing of call's statistics.
+            /// </summary>
+			public IntPtr call_stats_updated;
+
+            /// <summary>
+            /// Notifies an incoming informational message received.
+            /// </summary>
+			public IntPtr info_received;
+
+            /// <summary>
+            /// Notifies subscription state change
+            /// </summary>
+			public IntPtr subscription_state_changed;
+
+            /// <summary>
+            /// Notifies a an event notification, see linphone_core_subscribe()
+            /// </summary>
+			public IntPtr notify_received;
+
+            /// <summary>
+            /// Notifies publish state change (only from #LinphoneEvent api)
+            /// </summary>
+			public IntPtr publish_state_changed;
+
+            /// <summary>
+            /// Notifies configuring status changes
+            /// </summary>
+			public IntPtr configuring_status;
+
+            /// <summary>
+            /// Callback that notifies various events with human readable text (deprecated)
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr display_status;
+
+            /// <summary>
+            /// Callback to display a message to the user (deprecated)
+            /// </summary>
+            [System.Obsolete]
+			public IntPtr display_message;
+
+            /// <summary>
+            /// Callback to display a warning to the user (deprecated)
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr display_warning;
+
+            [System.Obsolete]
+            public IntPtr display_url;
+
+            /// <summary>
+            /// Notifies the application that it should show up
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr show;
+
+            /// <summary>
+            /// Use #message_received instead <br> A text message has been received
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr text_received;
+
+            /// <summary>
+            /// Callback to store file received attached to a LinphoneChatMessage
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr file_transfer_recv;
+
+            /// <summary>
+            /// Callback to collect file chunk to be sent for a LinphoneChatMessage
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr file_transfer_send;
+
+            /// <summary>
+            /// Callback to indicate file transfer progress
+            /// </summary>
+            [System.Obsolete]
+            public IntPtr file_transfer_progress_indication;
+
+            /// <summary>
+            /// Callback to report IP network status (I.E up/down)
+            /// </summary>
+            public IntPtr network_reachable;
+
+            /// <summary>
+            /// Callback to upload collected logs
+            /// </summary>
+            public IntPtr log_collection_upload_state_changed;
+
+            /// <summary>
+            /// Callback to indicate log collection upload progress
+            /// </summary>
+            public IntPtr log_collection_upload_progress_indication;
+
+            public IntPtr friend_list_created;
+
+            public IntPtr friend_list_removed;
+
+            /// <summary>
+            /// User data associated with the above callbacks
+            /// </summary>
+            public IntPtr user_data;
+        };
+
+        #region Initializing
+
+        // http://www.linphone.org/docs/liblinphone/group__initializing.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        [System.Obsolete]
 		static extern void linphone_core_enable_logs (IntPtr FILE);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_disable_logs ();
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        [System.Obsolete]
+        static extern void linphone_core_disable_logs ();
 
-        [DllImport(LIBNAME)]
-        static extern IntPtr linphone_core_new(IntPtr vtable, string config_path, string factory_config_path, IntPtr userdata);
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        [System.Obsolete]
+        static extern IntPtr linphone_core_new (IntPtr vtable, string config_path, string factory_config_path, IntPtr userdata);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_destroy (IntPtr lc);
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_unref (IntPtr lc);
 
-        [DllImport(LIBNAME)]
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_iterate(IntPtr lc);
+
+        #endregion
+
+        #region Proxies
+
+        // http://www.linphone.org/docs/liblinphone/group__proxies.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr linphone_core_create_proxy_config (IntPtr lc);
 
-        [DllImport(LIBNAME)]
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_proxy_config_set_identity (IntPtr obj, string identity);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_proxy_config_set_server_addr (IntPtr obj, string server_addr);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_proxy_config_enable_register (IntPtr obj, bool val);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_add_proxy_config (IntPtr lc, IntPtr cfg);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_default_proxy_config (IntPtr lc, IntPtr config);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        [System.Obsolete]
+        static extern int linphone_core_get_default_proxy (IntPtr lc, ref IntPtr config);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern bool linphone_proxy_config_is_registered (IntPtr config);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_proxy_config_edit (IntPtr config);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_proxy_config_done (IntPtr config);
+
+        #endregion
+
+        #region Network
+
+        // http://www.linphone.org/docs/liblinphone/group__network__parameters.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_set_sip_transports (IntPtr lc, IntPtr tr_config);
+
+        #endregion
+
+        #region SIP
+
+        // http://www.linphone.org/docs/liblinphone/group__linphone__address.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        [System.Obsolete]
+        static extern void linphone_address_destroy (IntPtr u);
+
+        #endregion
+
+        #region Miscenalleous
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_user_agent (IntPtr lc, string ua_name, string version);
+
+        #endregion
+
+        #region Calls
+
+        // http://www.linphone.org/docs/liblinphone/group__call__control.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_create_call_params (IntPtr lc, IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_params_enable_video (IntPtr lc, bool enabled);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_params_enable_early_media_sending (IntPtr lc, bool enabled);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_invite_with_params (IntPtr lc, string url, IntPtr callparams);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_params_unref (IntPtr callparams);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_terminate_call (IntPtr lc, IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_call_ref(IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_unref (IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_terminate_all_calls (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_call_get_remote_address_as_string (IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_accept_call_with_params (IntPtr lc, IntPtr call, IntPtr callparams);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_params_set_record_file (IntPtr callparams, string filename);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_call_params_get_record_file (IntPtr callparams);
+
+        #endregion
+
+        #region Authentication
+
+        // http://www.linphone.org/docs/liblinphone/group__authentication.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_add_auth_info (IntPtr lc, IntPtr info);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 		static extern IntPtr linphone_auth_info_new (string username, string userid, string passwd, string ha1, string realm, string domain);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_add_auth_info (IntPtr lc, IntPtr info);
+        #endregion
 
-        [DllImport(LIBNAME)]
-		static extern int linphone_proxy_config_set_identity (IntPtr obj, string identity);
+        #region Calls miscenalleous
 
-        [DllImport(LIBNAME)]
-		static extern int linphone_proxy_config_set_server_addr (IntPtr obj, string server_addr);
+        // http://www.linphone.org/docs/liblinphone/group__call__misc.html
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_proxy_config_enable_register (IntPtr obj, bool val);
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_start_recording (IntPtr call);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_address_destroy (IntPtr u);
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_stop_recording (IntPtr call);
 
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_add_proxy_config (IntPtr lc, IntPtr cfg);
+        #endregion
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_set_default_proxy (IntPtr lc, IntPtr config);
+        #region Media
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_iterate (IntPtr lc);
+        // http://www.linphone.org/docs/liblinphone/group__media__parameters.html
 
-        [DllImport(LIBNAME)]
-		static extern IntPtr linphone_core_create_default_call_parameters (IntPtr lc);
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+		static extern void linphone_core_set_play_file (IntPtr lc, string file);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_params_enable_video (IntPtr lc, bool enabled);
+		[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+		static extern void linphone_core_set_record_file (IntPtr lc, string file);
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_params_enable_early_media_sending (IntPtr lc, bool enabled);
+        #endregion
 
-        [DllImport(LIBNAME)]
-		static extern IntPtr linphone_core_invite_with_params (IntPtr lc, string url, IntPtr callparams);
+#endregion
 
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_params_destroy (IntPtr callparams);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_terminate_call (IntPtr lc, IntPtr call);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_terminate_all_calls (IntPtr lc);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_get_default_proxy (IntPtr lc, ref IntPtr config);
-
-        [DllImport(LIBNAME)]
-		static extern bool linphone_proxy_config_is_registered (IntPtr config);
-
-        [DllImport(LIBNAME)]
-		static extern void linphone_proxy_config_edit (IntPtr config);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_proxy_config_done (IntPtr config);
-
-        [DllImport(LIBNAME)]
-        static extern IntPtr linphone_call_get_remote_address_as_string(IntPtr call);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_accept_call_with_params (IntPtr lc, IntPtr call, IntPtr callparams);
-
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_start_recording (IntPtr call);
-
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_stop_recording (IntPtr call);
-
-        [DllImport(LIBNAME)]
-		static extern void linphone_call_params_set_record_file (IntPtr callparams, string filename);
-
-        [DllImport(LIBNAME)]
-        static extern IntPtr linphone_call_params_get_record_file(IntPtr callparams);
-
-        [DllImport(LIBNAME)]
-		static extern int linphone_core_set_sip_transports (IntPtr lc, IntPtr tr_config);
-
-        [DllImport(LIBNAME)]
-		static extern void linphone_core_set_user_agent (IntPtr lc, string ua_name, string version);
-
-		[DllImport(LIBNAME)]
-		static extern void linphone_core_set_play_file(IntPtr lc, string file);
-
-		[DllImport(LIBNAME)]
-		static extern void linphone_core_set_record_file(IntPtr lc, string file);
-
-		[DllImport(LIBNAME)]
-		static extern void linphone_core_use_files(IntPtr lc, bool yesno);
-
-	#endregion
-
-		class LinphoneCall : Call
+        class LinphoneCall : Call
 		{
 			IntPtr linphoneCallPtr;
 
 			public IntPtr LinphoneCallPtr {
 				get {
-					return linphoneCallPtr;
+                    return linphoneCallPtr;
 				}
 				set {
 					linphoneCallPtr = value;
@@ -280,16 +639,21 @@ namespace sipdotnet
             running = true;
             registration_state_changed = new LinphoneCoreRegistrationStateChangedCb(OnRegistrationChanged);
             call_state_changed = new LinphoneCoreCallStateChangedCb(OnCallStateChanged);
+
+#pragma warning disable 0612
             vtable = new LinphoneCoreVTable()
             {
                 global_state_changed = IntPtr.Zero,
                 registration_state_changed = Marshal.GetFunctionPointerForDelegate(registration_state_changed),
                 call_state_changed = Marshal.GetFunctionPointerForDelegate(call_state_changed),
                 notify_presence_received = IntPtr.Zero,
+                notify_presence_received_for_uri_or_tel = IntPtr.Zero,
                 new_subscription_requested = IntPtr.Zero,
                 auth_info_requested = IntPtr.Zero,
+                authentication_requested = IntPtr.Zero,
                 call_log_updated = IntPtr.Zero,
                 message_received = IntPtr.Zero,
+                message_received_unable_decrypt = IntPtr.Zero,
                 is_composing_received = IntPtr.Zero,
                 dtmf_received = IntPtr.Zero,
                 refer_received = IntPtr.Zero,
@@ -308,9 +672,20 @@ namespace sipdotnet
                 display_url = IntPtr.Zero,
                 show = IntPtr.Zero,
                 text_received = IntPtr.Zero,
+                file_transfer_recv = IntPtr.Zero,
+                file_transfer_send = IntPtr.Zero,
+                file_transfer_progress_indication = IntPtr.Zero,
+                network_reachable = IntPtr.Zero,
+                log_collection_upload_state_changed = IntPtr.Zero,
+                log_collection_upload_progress_indication = IntPtr.Zero,
+                friend_list_created = IntPtr.Zero,
+                friend_list_removed = IntPtr.Zero,
+                user_data = IntPtr.Zero
             };
+#pragma warning restore 0612
+
             vtablePtr = Marshal.AllocHGlobal(Marshal.SizeOf(vtable));
-            Marshal.StructureToPtr(vtable, vtablePtr, false);
+            Marshal.StructureToPtr(vtable, vtablePtr, false); 
 
             linphoneCore = linphone_core_new(vtablePtr, null, null, IntPtr.Zero);
 
@@ -331,7 +706,7 @@ namespace sipdotnet
 
             linphone_core_set_user_agent (linphoneCore, agent, version);
 
-            callsDefaultParams = linphone_core_create_default_call_parameters(linphoneCore);
+            callsDefaultParams = linphone_core_create_call_params (linphoneCore, IntPtr.Zero);
             linphone_call_params_enable_video(callsDefaultParams, false);
             linphone_call_params_enable_early_media_sending(callsDefaultParams, true);
 
@@ -346,7 +721,7 @@ namespace sipdotnet
 			linphone_proxy_config_set_server_addr (proxy_cfg, server_addr);
 			linphone_proxy_config_enable_register (proxy_cfg, true);
 			linphone_core_add_proxy_config (linphoneCore, proxy_cfg);
-            linphone_core_set_default_proxy (linphoneCore, proxy_cfg);
+            linphone_core_set_default_proxy_config (linphoneCore, proxy_cfg);
 		}
 
 		public void DestroyPhone ()
@@ -357,7 +732,7 @@ namespace sipdotnet
 			linphone_core_terminate_all_calls (linphoneCore);
 
 			SetTimeout (delegate {
-				linphone_call_params_destroy (callsDefaultParams);
+                linphone_call_params_unref (callsDefaultParams);
 
 				if (linphone_proxy_config_is_registered (proxy_cfg)) {
 					linphone_proxy_config_edit (proxy_cfg);
@@ -372,29 +747,30 @@ namespace sipdotnet
 			}, 5000);
 		}
 
-		void LinphoneMainLoop ()
-		{
-			while (running)
-			{
-                linphone_core_iterate (linphoneCore); // roll
-				System.Threading.Thread.Sleep (50);
-			}
+        void LinphoneMainLoop()
+        {
+            while (running)
+            {
+                linphone_core_iterate(linphoneCore); // roll
+                System.Threading.Thread.Sleep(100);
+            }
 
-			linphone_core_destroy (linphoneCore);
+            linphone_core_unref(linphoneCore);
 
             if (vtablePtr != IntPtr.Zero)
                 Marshal.FreeHGlobal(vtablePtr);
             if (t_configPtr != IntPtr.Zero)
                 Marshal.FreeHGlobal(t_configPtr);
-			registration_state_changed = null;
-			call_state_changed = null;
-			linphoneCore = callsDefaultParams = proxy_cfg = auth_info = t_configPtr = IntPtr.Zero;
-			coreLoop = null;
-			identity = null;
+            registration_state_changed = null;
+            call_state_changed = null;
+            linphoneCore = callsDefaultParams = proxy_cfg = auth_info = t_configPtr = IntPtr.Zero;
+            coreLoop = null;
+            identity = null;
             server_addr = null;
 
             if (RegistrationStateChangedEvent != null)
                 RegistrationStateChangedEvent(LinphoneRegistrationState.LinphoneRegistrationCleared);
+
 		}
 
 		public void TerminateCall (Call call)
@@ -410,7 +786,7 @@ namespace sipdotnet
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
 			linphone_core_terminate_call (linphoneCore, linphonecall.LinphoneCallPtr);
-		}
+        }
 
 		public void MakeCall (string uri)
 		{
@@ -427,7 +803,9 @@ namespace sipdotnet
 					ErrorEvent (null, "Cannot call.");
 				return;
 			}
-		}
+
+            linphone_call_ref(call);
+        }
 
 		public void MakeCallAndRecord (string uri, string filename)
 		{
@@ -446,7 +824,8 @@ namespace sipdotnet
 				return;
 			}
 
-			linphone_call_start_recording (call);
+            linphone_call_ref(call);
+            linphone_call_start_recording (call);
 		}
 
 		public void ReceiveCallAndRecord (Call call, string filename)
@@ -461,7 +840,8 @@ namespace sipdotnet
 			}
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
-			linphone_call_params_set_record_file (callsDefaultParams, filename);
+            linphone_call_ref(linphonecall.LinphoneCallPtr);
+            linphone_call_params_set_record_file (callsDefaultParams, filename);
 			linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callsDefaultParams);
 			linphone_call_start_recording (linphonecall.LinphoneCallPtr);
 		}
@@ -478,7 +858,8 @@ namespace sipdotnet
 			}
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
-			linphone_call_params_set_record_file (callsDefaultParams, null);
+            linphone_call_ref(linphonecall.LinphoneCallPtr);
+            linphone_call_params_set_record_file (callsDefaultParams, null);
 			linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callsDefaultParams);
 		}
 
@@ -558,7 +939,9 @@ namespace sipdotnet
 					break;
 			}
 
-			LinphoneCall existCall = FindCall (call);
+            IntPtr callref = linphone_call_ref(call);
+
+            LinphoneCall existCall = FindCall (callref);
 
 			if (existCall == null) {
 				existCall = new LinphoneCall ();
@@ -566,19 +949,26 @@ namespace sipdotnet
 				existCall.SetCallType (newtype);
 				existCall.SetFrom (from);
 				existCall.SetTo (to);
-				existCall.LinphoneCallPtr = call;
+				existCall.LinphoneCallPtr = callref;
 
 				calls.Add (existCall);
 
-				if ((CallStateChangedEvent != null))
+				if (CallStateChangedEvent != null)
 					CallStateChangedEvent (existCall);
 			} else {
 				if (existCall.GetState () != newstate) {
 					existCall.SetCallState (newstate);
-					CallStateChangedEvent (existCall);
-				}
+                    if (CallStateChangedEvent != null)
+                        CallStateChangedEvent(existCall);
+                }
 			}
-		}
+
+            if (cstate == LinphoneCallState.LinphoneCallReleased)
+            {
+                linphone_call_unref(existCall.LinphoneCallPtr);
+                calls.Remove(existCall);
+            }
+        }
 
 	}
 }
