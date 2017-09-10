@@ -34,19 +34,62 @@ namespace sipdotnet
 
 		public enum Error
 		{
-			RegisterFailed, // registration error
-			LineIsBusyError, // trying to make/receive call while another call is active
-			OrderError, // trying to connect while connected / connecting or disconnect when not connected
-            CallError, // call failed
+            /// <summary>
+            /// Registration error
+            /// </summary>
+			RegisterFailed,
+
+            /// <summary>
+            /// Trying to make/receive call while another call is active
+            /// </summary>
+			LineIsBusyError,
+
+            /// <summary>
+            /// Trying to connect while connected / connecting or disconnect when not connected
+            /// </summary>
+			OrderError,
+
+            /// <summary>
+            /// Call failed
+            /// </summary>
+            CallError,
 			UnknownError
 		};
 
-		public delegate void OnPhoneConnected (); // successful registered
-		public delegate void OnPhoneDisconnected (); // successful unregistered
-		public delegate void OnIncomingCall (Call call); // phone is ringing
-		public delegate void OnCallActive (Call call); // link is established
-		public delegate void OnCallCompleted (Call call); // call completed
-		public delegate void OnError (Call call, Error error); // error notification
+        /// <summary>
+        /// Successful registered
+        /// </summary>
+		public delegate void OnPhoneConnected ();
+
+        /// <summary>
+        /// Successful unregistered
+        /// </summary>
+		public delegate void OnPhoneDisconnected ();
+
+        /// <summary>
+        /// Phone is ringing
+        /// </summary>
+        /// <param name="call"></param>
+		public delegate void OnIncomingCall (Call call);
+
+        /// <summary>
+        /// Link is established
+        /// </summary>
+        /// <param name="call"></param>
+		public delegate void OnCallActive (Call call);
+
+        /// <summary>
+        /// Call completed
+        /// </summary>
+        /// <param name="call"></param>
+		public delegate void OnCallCompleted (Call call);
+
+        /// <summary>
+        /// Error notification
+        /// </summary>
+        /// <param name="call"></param>
+        /// <param name="error"></param>
+		public delegate void OnError (Call call, Error error);
 
 		public event OnPhoneConnected PhoneConnectedEvent;
 		public event OnPhoneDisconnected PhoneDisconnectedEvent;
@@ -143,9 +186,8 @@ namespace sipdotnet
 
                 case Call.CallState.Error:
                     this.lineState = LineState.Free;
-                    if (ErrorEvent != null) ErrorEvent(null, Error.CallError);
-                    if (CallCompletedEvent != null)
-                        CallCompletedEvent(call);
+                    if (ErrorEvent != null)
+                            ErrorEvent(null, Error.CallError);
                     break;
 
 				case Call.CallState.Completed:
