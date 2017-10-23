@@ -27,6 +27,9 @@ Current available functionality:
      - `ReceiveCall`
      - `ReceiveCallAndRecord`
      - `TerminateCall`
+ - Utilities:
+	 - `SendDTMFs` (sending DTMF-tones)
+	 - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
 
 Example
 -------
@@ -58,7 +61,7 @@ Requirements
 Liblinphone on Windows
 ----------------------
 
-Due to backwardness of [SDK binaries](http://www.linphone.org/technical-corner/liblinphone/downloads) version it's _recommended_ to use dlls from [Linphone desktop build](http://www.linphone.org/technical-corner/linphone/downloads). You can collect necessary dlls yourself using such tools as [Dependency Walker](http://www.dependencywalker.com/) against 'linphone.dll' or use my zipped collection in [lib](https://github.com/bedefaced/sipdotnet/blob/master/lib) directory.
+Due to backwardness of [SDK binaries](http://www.linphone.org/technical-corner/liblinphone/downloads) version it's _recommended_ to use dlls from [Linphone desktop build](http://www.linphone.org/technical-corner/linphone/downloads). You can use my zipped collection in [lib](https://github.com/bedefaced/sipdotnet/blob/master/lib) directory or collect necessary dlls yourself using such tools as [Dependency Walker](http://www.dependencywalker.com/) against 'linphone.dll'.
 
 Liblinphone on Linux
 --------------------
