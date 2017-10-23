@@ -225,7 +225,10 @@ namespace sipdotnet
 			if (string.IsNullOrEmpty(sipUriOrPhone))
 				throw new ArgumentNullException ("sipUriOrPhone");
 
-			if (lineState == LineState.Free)
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+
+            if (lineState == LineState.Free)
 				linphone.MakeCall (sipUriOrPhone);
 			else { 
 				if (ErrorEvent != null) 
@@ -241,7 +244,10 @@ namespace sipdotnet
 			if (string.IsNullOrEmpty(filename))
 				throw new ArgumentNullException ("filename");
 
-			if (lineState == LineState.Free)
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+
+            if (lineState == LineState.Free)
 				linphone.MakeCallAndRecord (sipUriOrPhone, filename);
 			else { 
 				if (ErrorEvent != null) 
@@ -251,7 +257,9 @@ namespace sipdotnet
 
 		public void ReceiveCallAndRecord (Call call, string filename)
 		{
-			if (call == null)
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
 				throw new ArgumentNullException ("call");
 			if (string.IsNullOrEmpty(filename))
 				throw new ArgumentNullException ("filename");
@@ -261,7 +269,9 @@ namespace sipdotnet
 
 		public void ReceiveCall (Call call)
 		{
-			if (call == null)
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
 				throw new ArgumentNullException ("call");
 
 			linphone.ReceiveCall (call);
@@ -269,11 +279,42 @@ namespace sipdotnet
 
 		public void TerminateCall (Call call)
 		{
-			if (call == null)
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
 				throw new ArgumentNullException ("call");
 
 			linphone.TerminateCall (call);
 		}
-	}
+
+        public void SendDTMFs (Call call, string dtmfs)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+            if (string.IsNullOrEmpty(dtmfs))
+                throw new ArgumentNullException("dtmfs");
+
+            linphone.SendDTMFs (call, dtmfs);
+        }
+
+        public void SetIncomingRingSound (string filename)
+        {
+            if (linphone == null)
+                throw new InvalidOperationException("not connected");
+
+            linphone.SetIncomingRingSound (filename);
+        }
+
+        public void SetRingbackSound (string filename)
+        {
+            if (linphone == null)
+                throw new InvalidOperationException("not connected");
+
+            linphone.SetRingbackSound (filename);
+        }
+
+    }
 }
 

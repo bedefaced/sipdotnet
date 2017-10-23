@@ -91,6 +91,22 @@ namespace sipdotnet
         };
 
         /// <summary>
+        /// Logging level
+        /// https://github.com/BelledonneCommunications/ortp/blob/master/include/ortp/logging.h
+        /// https://github.com/BelledonneCommunications/bctoolbox/blob/master/include/bctoolbox/logging.h
+        /// </summary>
+        public enum OrtpLogLevel
+        {
+            DEBUG = 1,
+            TRACE = 1 << 1,
+            MESSAGE = 1 << 2,
+            WARNING = 1 << 3,
+            ERROR = 1 << 4,
+            FATAL = 1 << 5,
+            END = 1 << 6
+        };
+
+        /// <summary>
         /// Represents the different state a call can reach into
         /// http://www.linphone.org/docs/liblinphone/group__call__control.html
         /// </summary>
@@ -409,7 +425,10 @@ namespace sipdotnet
         static extern void linphone_core_unref (IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        static extern void linphone_core_iterate(IntPtr lc);
+        static extern void linphone_core_iterate (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_log_level (OrtpLogLevel loglevel);
 
         #endregion
 
@@ -519,6 +538,12 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern IntPtr linphone_call_params_get_record_file (IntPtr callparams);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_call_params_enable_audio (IntPtr callparams, bool enabled);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_call_send_dtmfs (IntPtr call, string dtmfs);
+
         #endregion
 
         #region Authentication
@@ -555,9 +580,18 @@ namespace sipdotnet
 		[DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
 		static extern void linphone_core_set_record_file (IntPtr lc, string file);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_ring (IntPtr lc, string file);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_remote_ringback_tone (IntPtr lc, string file);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_set_ringback (IntPtr lc, string file);
+
         #endregion
 
-#endregion
+        #endregion
 
         class LinphoneCall : Call
 		{
@@ -632,8 +666,10 @@ namespace sipdotnet
 		{
 			#if (TRACE)
 			linphone_core_enable_logs (IntPtr.Zero);
+            linphone_core_set_log_level (OrtpLogLevel.DEBUG);
 			#else
 			linphone_core_disable_logs ();
+            linphone_core_set_log_level (OrtpLogLevel.END);
 			#endif
 
             running = true;
@@ -688,7 +724,7 @@ namespace sipdotnet
             Marshal.StructureToPtr(vtable, vtablePtr, false); 
 
             linphoneCore = linphone_core_new(vtablePtr, null, null, IntPtr.Zero);
-
+            
             coreLoop = new Thread(LinphoneMainLoop);
             coreLoop.IsBackground = false;
             coreLoop.Start();
@@ -707,10 +743,11 @@ namespace sipdotnet
             linphone_core_set_user_agent (linphoneCore, agent, version);
 
             callsDefaultParams = linphone_core_create_call_params (linphoneCore, IntPtr.Zero);
-            linphone_call_params_enable_video(callsDefaultParams, false);
-            linphone_call_params_enable_early_media_sending(callsDefaultParams, true);
+            linphone_call_params_enable_video (callsDefaultParams, false);
+            linphone_call_params_enable_audio (callsDefaultParams, true);
+            linphone_call_params_enable_early_media_sending (callsDefaultParams, true);
 
-			identity = "sip:" + username + "@" + server;
+            identity = "sip:" + username + "@" + server;
 			server_addr = "sip:" + server + ":" + port.ToString();
 
 			auth_info = linphone_auth_info_new (username, null, password, null, null, null);
@@ -722,7 +759,7 @@ namespace sipdotnet
 			linphone_proxy_config_enable_register (proxy_cfg, true);
 			linphone_core_add_proxy_config (linphoneCore, proxy_cfg);
             linphone_core_set_default_proxy_config (linphoneCore, proxy_cfg);
-		}
+        }
 
 		public void DestroyPhone ()
 		{
@@ -772,8 +809,48 @@ namespace sipdotnet
                 RegistrationStateChangedEvent(LinphoneRegistrationState.LinphoneRegistrationCleared);
 
 		}
+        
+        public void SendDTMFs (Call call, string dtmfs)
+        {
+            if (call == null)
+                throw new ArgumentNullException("call");
 
-		public void TerminateCall (Call call)
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                if (ErrorEvent != null)
+                    ErrorEvent(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
+            LinphoneCall linphonecall = (LinphoneCall)call;
+            linphone_call_send_dtmfs (linphonecall.LinphoneCallPtr, dtmfs);
+        }
+
+        public void SetRingbackSound (string file)
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                if (ErrorEvent != null)
+                    ErrorEvent(null, "Cannot modify configuration when Linphone Core is not working.");
+                return;
+            }
+
+            linphone_core_set_ringback (linphoneCore, file);
+        }
+
+        public void SetIncomingRingSound (string file)
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                if (ErrorEvent != null)
+                    ErrorEvent(null, "Cannot modify configuration when Linphone Core is not working.");
+                return;
+            }
+
+            linphone_core_set_ring (linphoneCore, file);
+        }
+        
+        public void TerminateCall (Call call)
 		{
 			if (call == null)
 				throw new ArgumentNullException ("call");
