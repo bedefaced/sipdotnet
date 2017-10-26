@@ -8,6 +8,8 @@ Using
 
 You can access to wrapped liblinphone actions and events by `Phone` class. Only that you need is the SIP account (`Account` class).
 
+For using library from .NET code you need to copy linphone dlls ([liblinphone and dependencies](https://github.com/bedefaced/sipdotnet#requirements)) to directory with your EXE file (or use, for example, [Add item](https://msdn.microsoft.com/en-us/library/9f4t9t92(v=vs.100).aspx) dialog in Visual Studio (and select *Copy to Output*: `Copy if newer` or `Copy always` in `Properties` window of added dlls)) and then add `sipdotnet.dll` (or the whole project) as dependency to your solution.
+
 Current available functionality:
 
  - SIP-proxy connection control:
