@@ -91,14 +91,45 @@ namespace sipdotnet
         /// <param name="error"></param>
 		public delegate void OnError (Call call, Error error);
 
-		public event OnPhoneConnected PhoneConnectedEvent;
+        /// <summary>
+        /// Raw log notification
+        /// </summary>
+        /// <param name="message"></param>
+        public delegate void OnLog(string message);
+
+        public event OnPhoneConnected PhoneConnectedEvent;
 		public event OnPhoneDisconnected PhoneDisconnectedEvent;
 		public event OnIncomingCall IncomingCallEvent;
 		public event OnCallActive CallActiveEvent;
 		public event OnCallCompleted CallCompletedEvent;
 		public event OnError ErrorEvent;
 
-		Account account;
+        private event OnLog logEventHandler;
+        public event OnLog LogEvent
+        {
+            add
+            {
+                logEventHandler += value;
+                if (!linphone.LogsEnabled) {
+                    linphone.LogsEnabled = true;
+                    linphone.LogEvent += (message) =>
+                    {
+                        logEventHandler?.Invoke(message);
+                    };
+                }
+            }
+
+            remove
+            {
+                logEventHandler -= value;
+                if (logEventHandler == null)
+                {
+                    linphone.LogsEnabled = false;
+                }
+            }
+        }
+
+        Account account;
 
 		public Account Account {
 			get {
@@ -143,18 +174,18 @@ namespace sipdotnet
 
 					case Linphone.LinphoneRegistrationState.LinphoneRegistrationFailed:
                         linphone.DestroyPhone();
-						if (ErrorEvent != null) ErrorEvent (null, Error.RegisterFailed);
-						break;
+                        ErrorEvent?.Invoke(null, Error.RegisterFailed);
+                        break;
 
 					case Linphone.LinphoneRegistrationState.LinphoneRegistrationCleared:
 						connectState = ConnectState.Disconnected;
-						if (PhoneDisconnectedEvent != null) PhoneDisconnectedEvent();
-						break;
+                        PhoneDisconnectedEvent?.Invoke();
+                        break;
 
 					case Linphone.LinphoneRegistrationState.LinphoneRegistrationOk:
 						connectState = ConnectState.Connected;
-						if (PhoneConnectedEvent != null) PhoneConnectedEvent();
-						break;
+                        PhoneConnectedEvent?.Invoke();
+                        break;
 
 					case Linphone.LinphoneRegistrationState.LinphoneRegistrationNone:
 					default:
@@ -164,8 +195,8 @@ namespace sipdotnet
 
 			linphone.ErrorEvent += (call, message) => {
 				Console.WriteLine ("Error: {0}", message);
-				if (ErrorEvent != null) ErrorEvent (call, Error.UnknownError);
-			};
+                ErrorEvent?.Invoke(call, Error.UnknownError);
+            };
 
 			linphone.CallStateChangedEvent += (Call call) => {
 				Call.CallState state = call.GetState();
@@ -173,29 +204,25 @@ namespace sipdotnet
 				switch (state) {
 				case Call.CallState.Active:
 					lineState = LineState.Busy;
-					if (CallActiveEvent != null) 
-						CallActiveEvent (call);
-					break;
+                        CallActiveEvent?.Invoke(call);
+                        break;
 
 				case Call.CallState.Loading:
 					lineState = LineState.Busy;
 					if (call.GetCallType () == Call.CallType.Incoming)
-						if (IncomingCallEvent != null) 
-							IncomingCallEvent (call);
-					break;
+                            IncomingCallEvent?.Invoke(call);
+                        break;
 
                 case Call.CallState.Error:
                     this.lineState = LineState.Free;
-                    if (ErrorEvent != null)
-                            ErrorEvent(null, Error.CallError);
-                    break;
+                        ErrorEvent?.Invoke(null, Error.CallError);
+                        break;
 
 				case Call.CallState.Completed:
 				default:
 					this.lineState = LineState.Free;
-					if (CallCompletedEvent != null) 
-						CallCompletedEvent (call);
-					break;
+                        CallCompletedEvent?.Invoke(call);
+                        break;
 				}
 
 			};
@@ -209,16 +236,16 @@ namespace sipdotnet
 				linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version);
             }
             else
-                if (ErrorEvent != null) ErrorEvent(null, Error.OrderError);
-		}
+                ErrorEvent?.Invoke(null, Error.OrderError);
+        }
 
 		public void Disconnect ()
 		{
 			if (connectState == ConnectState.Connected)
 				linphone.DestroyPhone ();
-			else 
-				if (ErrorEvent != null) ErrorEvent (null, Error.OrderError);
-		}
+			else
+                ErrorEvent?.Invoke(null, Error.OrderError);
+        }
 
 		public void MakeCall (string sipUriOrPhone)
 		{
@@ -230,10 +257,9 @@ namespace sipdotnet
 
             if (lineState == LineState.Free)
 				linphone.MakeCall (sipUriOrPhone);
-			else { 
-				if (ErrorEvent != null) 
-					ErrorEvent (null, Error.LineIsBusyError);
-			}
+			else {
+                ErrorEvent?.Invoke(null, Error.LineIsBusyError);
+            }
 		}
 
 		public void MakeCallAndRecord (string sipUriOrPhone, string filename)
@@ -249,10 +275,9 @@ namespace sipdotnet
 
             if (lineState == LineState.Free)
 				linphone.MakeCallAndRecord (sipUriOrPhone, filename);
-			else { 
-				if (ErrorEvent != null) 
-					ErrorEvent (null, Error.LineIsBusyError);
-			}
+			else {
+                ErrorEvent?.Invoke(null, Error.LineIsBusyError);
+            }
 		}
 
 		public void ReceiveCallAndRecord (Call call, string filename)

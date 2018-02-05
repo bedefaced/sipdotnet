@@ -644,7 +644,44 @@ namespace sipdotnet
 
 		List<LinphoneCall> calls = new List<LinphoneCall> ();
 
-		LinphoneCall FindCall (IntPtr call)
+        public delegate void RegistrationStateChangedDelegate(LinphoneRegistrationState state);
+        public event RegistrationStateChangedDelegate RegistrationStateChangedEvent;
+
+        public delegate void CallStateChangedDelegate(Call call);
+        public event CallStateChangedDelegate CallStateChangedEvent;
+
+        public delegate void ErrorDelegate(Call call, string message);
+        public event ErrorDelegate ErrorEvent;
+
+        private bool logsEnabled = false;
+        public bool LogsEnabled { get => logsEnabled; set => logsEnabled = value; }
+        public delegate void LogDelegate(string message);
+        private event LogDelegate logEventHandler;
+        public event LogDelegate LogEvent
+        {
+            add
+            {
+                if (logEventHandler == null && LogsEnabled)
+                {
+                    linphone_core_enable_logs(IntPtr.Zero);
+                    linphone_core_set_log_level(OrtpLogLevel.DEBUG);
+                }
+                logEventHandler += value;
+            }
+
+            remove
+            {
+                logEventHandler -= value;
+                if (logEventHandler == null)
+                {
+                    linphone_core_disable_logs();
+                    linphone_core_set_log_level(OrtpLogLevel.END);
+                }
+            }
+        }
+
+
+        LinphoneCall FindCall (IntPtr call)
 		{
 			return calls.Find (delegate(LinphoneCall obj) {
 				return (obj.LinphoneCallPtr == call);
@@ -664,15 +701,11 @@ namespace sipdotnet
 
 		public void CreatePhone (string username, string password, string server, int port, string agent, string version)
 		{
-			#if (TRACE)
-			linphone_core_enable_logs (IntPtr.Zero);
-            linphone_core_set_log_level (OrtpLogLevel.DEBUG);
-			#else
-			linphone_core_disable_logs ();
-            linphone_core_set_log_level (OrtpLogLevel.END);
-			#endif
-
             running = true;
+
+            linphone_core_disable_logs();
+            linphone_core_set_log_level(OrtpLogLevel.END);
+
             registration_state_changed = new LinphoneCoreRegistrationStateChangedCb(OnRegistrationChanged);
             call_state_changed = new LinphoneCoreCallStateChangedCb(OnCallStateChanged);
 
@@ -763,10 +796,9 @@ namespace sipdotnet
 
 		public void DestroyPhone ()
 		{
-            if (RegistrationStateChangedEvent != null)
-                RegistrationStateChangedEvent(LinphoneRegistrationState.LinphoneRegistrationProgress); // disconnecting
+            RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationProgress); // disconnecting
 
-			linphone_core_terminate_all_calls (linphoneCore);
+            linphone_core_terminate_all_calls (linphoneCore);
 
 			SetTimeout (delegate {
                 linphone_call_params_unref (callsDefaultParams);
@@ -779,9 +811,9 @@ namespace sipdotnet
 
 				SetTimeout (delegate {
 					running = false;
-				}, 10000);
+				}, 5000);
 
-			}, 5000);
+			}, 2000);
 		}
 
         void LinphoneMainLoop()
@@ -805,10 +837,9 @@ namespace sipdotnet
             identity = null;
             server_addr = null;
 
-            if (RegistrationStateChangedEvent != null)
-                RegistrationStateChangedEvent(LinphoneRegistrationState.LinphoneRegistrationCleared);
+            RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationCleared);
 
-		}
+        }
         
         public void SendDTMFs (Call call, string dtmfs)
         {
@@ -817,8 +848,7 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                if (ErrorEvent != null)
-                    ErrorEvent(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
                 return;
             }
 
@@ -830,8 +860,7 @@ namespace sipdotnet
         {
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                if (ErrorEvent != null)
-                    ErrorEvent(null, "Cannot modify configuration when Linphone Core is not working.");
+                ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
                 return;
             }
 
@@ -842,8 +871,7 @@ namespace sipdotnet
         {
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                if (ErrorEvent != null)
-                    ErrorEvent(null, "Cannot modify configuration when Linphone Core is not working.");
+                ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
                 return;
             }
 
@@ -856,9 +884,8 @@ namespace sipdotnet
 				throw new ArgumentNullException ("call");
 
 			if (linphoneCore == IntPtr.Zero || !running) {
-				if (ErrorEvent != null)
-					ErrorEvent (call, "Cannot make or receive calls when Linphone Core is not working.");
-				return;
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
 			}
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
@@ -868,17 +895,15 @@ namespace sipdotnet
 		public void MakeCall (string uri)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) {
-				if (ErrorEvent != null)
-					ErrorEvent (null, "Cannot make or receive calls when Linphone Core is not working.");
-				return;
+                ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
 			}
 
 			IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callsDefaultParams);
 
 			if (call == IntPtr.Zero) {
-				if (ErrorEvent != null)
-					ErrorEvent (null, "Cannot call.");
-				return;
+                ErrorEvent?.Invoke(null, "Cannot call.");
+                return;
 			}
 
             linphone_call_ref(call);
@@ -887,18 +912,16 @@ namespace sipdotnet
 		public void MakeCallAndRecord (string uri, string filename)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) {
-				if (ErrorEvent != null)
-					ErrorEvent (null, "Cannot make or receive calls when Linphone Core is not working.");
-				return;
+                ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
 			}
 
 			linphone_call_params_set_record_file (callsDefaultParams, filename);
 
 			IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callsDefaultParams);
 			if (call == IntPtr.Zero) {
-				if (ErrorEvent != null)
-					ErrorEvent (null, "Cannot call.");
-				return;
+                ErrorEvent?.Invoke(null, "Cannot call.");
+                return;
 			}
 
             linphone_call_ref(call);
@@ -911,9 +934,8 @@ namespace sipdotnet
 				throw new ArgumentNullException ("call");
 
 			if (linphoneCore == IntPtr.Zero || !running) {
-				if (ErrorEvent != null)
-					ErrorEvent (call, "Cannot make or receive calls when Linphone Core is not working.");
-				return;
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
 			}
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
@@ -929,9 +951,8 @@ namespace sipdotnet
 				throw new ArgumentNullException ("call");
 
 			if (linphoneCore == IntPtr.Zero || !running) {
-				if (ErrorEvent != null)
-					ErrorEvent (call, "Cannot receive call when Linphone Core is not working.");
-				return;
+                ErrorEvent?.Invoke(call, "Cannot receive call when Linphone Core is not working.");
+                return;
 			}
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
@@ -940,33 +961,21 @@ namespace sipdotnet
 			linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callsDefaultParams);
 		}
 
-		public delegate void RegistrationStateChangedDelegate (LinphoneRegistrationState state);
-		public event RegistrationStateChangedDelegate RegistrationStateChangedEvent;
-
-		public delegate void CallStateChangedDelegate (Call call);
-		public event CallStateChangedDelegate CallStateChangedEvent;
-
-		public delegate void ErrorDelegate (Call call, string message);
-		public event ErrorDelegate ErrorEvent;
-
 		void OnRegistrationChanged (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message) 
 		{
 			if (linphoneCore == IntPtr.Zero || !running) return;
-            #if (TRACE)
-            Console.WriteLine("OnRegistrationChanged: {0}", cstate);
-            #endif
-            if (RegistrationStateChangedEvent != null)
-				RegistrationStateChangedEvent (cstate);
-		}
+            
+            logEventHandler?.Invoke("OnRegistrationChanged: " + cstate);
+
+            RegistrationStateChangedEvent?.Invoke(cstate);
+        }
 
 		void OnCallStateChanged (IntPtr lc, IntPtr call, LinphoneCallState cstate, string message)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) return;
-            #if (TRACE)
-            Console.WriteLine("OnCallStateChanged: {0}", cstate);
-            #endif
+            logEventHandler?.Invoke("OnCallStateChanged: " + cstate);
 
-			Call.CallState newstate = Call.CallState.None;
+            Call.CallState newstate = Call.CallState.None;
 			Call.CallType newtype = Call.CallType.None;
 			string from = "";
 			string to = "";
@@ -1030,13 +1039,11 @@ namespace sipdotnet
 
 				calls.Add (existCall);
 
-				if (CallStateChangedEvent != null)
-					CallStateChangedEvent (existCall);
-			} else {
+                CallStateChangedEvent?.Invoke(existCall);
+            } else {
 				if (existCall.GetState () != newstate) {
 					existCall.SetCallState (newstate);
-                    if (CallStateChangedEvent != null)
-                        CallStateChangedEvent(existCall);
+                    CallStateChangedEvent?.Invoke(existCall);
                 }
 			}
 
