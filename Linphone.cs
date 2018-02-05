@@ -105,7 +105,7 @@ namespace sipdotnet
             FATAL = 1 << 5,
             END = 1 << 6
         };
-
+        
         /// <summary>
         /// Represents the different state a call can reach into
         /// http://www.linphone.org/docs/liblinphone/group__call__control.html
@@ -207,7 +207,27 @@ namespace sipdotnet
             /// </summary>
             LinphoneCallReleased
         };
-        
+
+        /// <summary>
+        /// Policy to use to pass through NATs/firewalls.
+        /// https://github.com/BelledonneCommunications/linphone/blob/master/coreapi/private.h
+        /// </summary>
+        struct LinphoneNatPolicy
+        {
+            public IntPtr baseObject;
+            public IntPtr user_data;
+            public IntPtr lc;
+            public IntPtr stun_resolver_context;
+            public IntPtr stun_addrinfo;
+            public string stun_server;
+            public string stun_server_username;
+            public string refObject;
+            public bool stun_enabled;
+            public bool turn_enabled;
+            public bool ice_enabled;
+            public bool upnp_enabled;
+        };
+
         /// <summary>
         /// Holds all callbacks that the application should implement. None is mandatory.
         /// http://www.linphone.org/docs/liblinphone/struct__LinphoneCoreVTable.html
@@ -467,6 +487,9 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern int linphone_proxy_config_done (IntPtr config);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_proxy_config_set_nat_policy (IntPtr cfg, IntPtr policy);
+
         #endregion
 
         #region Network
@@ -475,6 +498,39 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern int linphone_core_set_sip_transports (IntPtr lc, IntPtr tr_config);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_create_nat_policy (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_unref (IntPtr natpolicy);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_nat_policy_ref (IntPtr natpolicy);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_clear(IntPtr policy);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_enable_stun(IntPtr policy, bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_enable_turn(IntPtr policy, bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_enable_ice(IntPtr policy, bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_enable_upnp(IntPtr policy, bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_set_stun_server(IntPtr policy, string stun_server);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_set_stun_server_username(IntPtr policy, string username);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_nat_policy_resolve_stun_server(IntPtr policy);
 
         #endregion
 
@@ -635,7 +691,7 @@ namespace sipdotnet
 
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
 		LinphoneCoreCallStateChangedCb call_state_changed;
-		IntPtr linphoneCore, callsDefaultParams, proxy_cfg, auth_info, t_configPtr, vtablePtr;
+		IntPtr linphoneCore, callsDefaultParams, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
 		Thread coreLoop;
 		bool running = true;
 		string identity, server_addr;
@@ -699,12 +755,16 @@ namespace sipdotnet
 			timeout.Start ();
 		}
 
-		public void CreatePhone (string username, string password, string server, int port, string agent, string version)
-		{
-            running = true;
-
+        public Linphone()
+        {
             linphone_core_disable_logs();
             linphone_core_set_log_level(OrtpLogLevel.END);
+        }
+        
+        public void CreatePhone (string username, string password, string server, int port, string agent, string version,
+            bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server)
+		{
+            running = true;
 
             registration_state_changed = new LinphoneCoreRegistrationStateChangedCb(OnRegistrationChanged);
             call_state_changed = new LinphoneCoreCallStateChangedCb(OnCallStateChanged);
@@ -762,7 +822,7 @@ namespace sipdotnet
             coreLoop.IsBackground = false;
             coreLoop.Start();
 
-			t_config = new LCSipTransports()
+            t_config = new LCSipTransports()
 			{
 				udp_port = LC_SIP_TRANSPORT_RANDOM,
 				tcp_port = LC_SIP_TRANSPORT_RANDOM,
@@ -786,15 +846,30 @@ namespace sipdotnet
 			auth_info = linphone_auth_info_new (username, null, password, null, null, null);
 			linphone_core_add_auth_info (linphoneCore, auth_info);
 
-            proxy_cfg = linphone_core_create_proxy_config(linphoneCore);
+            natPolicy = linphone_core_create_nat_policy (linphoneCore);
+            natPolicy = linphone_nat_policy_ref (natPolicy);
+            linphone_nat_policy_enable_stun (natPolicy, use_stun);
+            linphone_nat_policy_enable_turn (natPolicy, use_turn);
+            linphone_nat_policy_enable_ice (natPolicy, use_ice);
+            linphone_nat_policy_enable_upnp (natPolicy, use_upnp);
+            if (!string.IsNullOrEmpty(stun_server))
+            {
+                linphone_nat_policy_set_stun_server (natPolicy, stun_server);
+                linphone_nat_policy_resolve_stun_server (natPolicy);
+            }
+
+            proxy_cfg = linphone_core_create_proxy_config (linphoneCore);
 			linphone_proxy_config_set_identity (proxy_cfg, identity);
 			linphone_proxy_config_set_server_addr (proxy_cfg, server_addr);
 			linphone_proxy_config_enable_register (proxy_cfg, true);
-			linphone_core_add_proxy_config (linphoneCore, proxy_cfg);
+
+            linphone_proxy_config_set_nat_policy (proxy_cfg, natPolicy);
+
+            linphone_core_add_proxy_config (linphoneCore, proxy_cfg);
             linphone_core_set_default_proxy_config (linphoneCore, proxy_cfg);
         }
-
-		public void DestroyPhone ()
+       
+        public void DestroyPhone ()
 		{
             RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationProgress); // disconnecting
 
@@ -824,6 +899,7 @@ namespace sipdotnet
                 System.Threading.Thread.Sleep(100);
             }
 
+            linphone_nat_policy_unref (natPolicy);
             linphone_core_unref(linphoneCore);
 
             if (vtablePtr != IntPtr.Zero)

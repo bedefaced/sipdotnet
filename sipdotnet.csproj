@@ -36,6 +36,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="NatPolicy.cs" />
     <Compile Include="Phone.cs" />
     <Compile Include="Account.cs" />
     <Compile Include="Linphone.cs" />

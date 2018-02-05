@@ -228,15 +228,21 @@ namespace sipdotnet
 			};
 		}
 
-		public void Connect ()
-		{
+        public void Connect(NatPolicy natPolicy)
+        {
             if (connectState == ConnectState.Disconnected)
             {
                 connectState = ConnectState.Progress;
-				linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version);
+                linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version,
+                    natPolicy.UseSTUN, natPolicy.UseTURN, natPolicy.UseICE, natPolicy.UseUPNP, natPolicy.Server);
             }
             else
                 ErrorEvent?.Invoke(null, Error.OrderError);
+        }
+
+        public void Connect ()
+		{
+            Connect(NatPolicy.GetDefaultNatPolicy());
         }
 
 		public void Disconnect ()
