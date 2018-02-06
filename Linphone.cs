@@ -768,6 +768,9 @@ namespace sipdotnet
 
         IntPtr createDefaultCallParams()
         {
+            if (linphoneCore == IntPtr.Zero || !running)
+                throw new InvalidOperationException("linphoneCore not started");
+
             IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
             callParams = linphone_call_params_ref(callParams);
             linphone_call_params_enable_video(callParams, false);
@@ -777,11 +780,13 @@ namespace sipdotnet
             return callParams;
         }
 
-        public Linphone()
+        Linphone()
         {
             linphone_core_disable_logs();
             linphone_core_set_log_level(OrtpLogLevel.END);
         }
+
+
         
         public void CreatePhone (string username, string password, string server, int port, string agent, string version,
             bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server)
@@ -1016,6 +1021,15 @@ namespace sipdotnet
 
         public void StartRecording (Call call)
         {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
             LinphoneCall linphonecall = (LinphoneCall)call;
             if (!string.IsNullOrEmpty(linphonecall.GetRecordfile()))
                 linphone_call_start_recording (linphonecall.LinphoneCallPtr);
@@ -1023,6 +1037,15 @@ namespace sipdotnet
 
         public void PauseRecording (Call call)
         {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
             LinphoneCall linphonecall = (LinphoneCall)call;
             if (!string.IsNullOrEmpty(linphonecall.GetRecordfile()))
                 linphone_call_stop_recording (linphonecall.LinphoneCallPtr);
