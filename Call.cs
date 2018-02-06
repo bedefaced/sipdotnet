@@ -48,6 +48,12 @@ namespace sipdotnet
 			return this.to; 
 		}
 
-	}
+        protected string recordfile;
+
+        public string GetRecordfile ()
+        {
+            return this.recordfile;
+        }
+    }
 }
 

@@ -219,13 +219,13 @@ namespace sipdotnet
             public IntPtr lc;
             public IntPtr stun_resolver_context;
             public IntPtr stun_addrinfo;
-            public string stun_server;
-            public string stun_server_username;
-            public string refObject;
-            public bool stun_enabled;
-            public bool turn_enabled;
-            public bool ice_enabled;
-            public bool upnp_enabled;
+            public IntPtr stun_server;
+            public IntPtr stun_server_username;
+            public IntPtr refObject;
+            public IntPtr stun_enabled;
+            public IntPtr turn_enabled;
+            public IntPtr ice_enabled;
+            public IntPtr upnp_enabled;
         };
 
         /// <summary>
@@ -568,6 +568,12 @@ namespace sipdotnet
         static extern IntPtr linphone_core_invite_with_params (IntPtr lc, string url, IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_call_get_params (IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_call_params_ref(IntPtr callparams);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern void linphone_call_params_unref (IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -681,7 +687,12 @@ namespace sipdotnet
 			{
 				this.to = to;
 			}
-		}
+
+            public void SetRecordFile(string recordfile)
+            {
+                this.recordfile = recordfile;
+            }
+        }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		delegate void LinphoneCoreRegistrationStateChangedCb (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message);
@@ -691,7 +702,7 @@ namespace sipdotnet
 
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
 		LinphoneCoreCallStateChangedCb call_state_changed;
-		IntPtr linphoneCore, callsDefaultParams, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
+		IntPtr linphoneCore, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
 		Thread coreLoop;
 		bool running = true;
 		string identity, server_addr;
@@ -754,6 +765,17 @@ namespace sipdotnet
 			};
 			timeout.Start ();
 		}
+
+        IntPtr createDefaultCallParams()
+        {
+            IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
+            callParams = linphone_call_params_ref(callParams);
+            linphone_call_params_enable_video(callParams, false);
+            linphone_call_params_enable_audio(callParams, true);
+            linphone_call_params_enable_early_media_sending(callParams, true);
+
+            return callParams;
+        }
 
         public Linphone()
         {
@@ -835,11 +857,6 @@ namespace sipdotnet
 
             linphone_core_set_user_agent (linphoneCore, agent, version);
 
-            callsDefaultParams = linphone_core_create_call_params (linphoneCore, IntPtr.Zero);
-            linphone_call_params_enable_video (callsDefaultParams, false);
-            linphone_call_params_enable_audio (callsDefaultParams, true);
-            linphone_call_params_enable_early_media_sending (callsDefaultParams, true);
-
             identity = "sip:" + username + "@" + server;
 			server_addr = "sip:" + server + ":" + port.ToString();
 
@@ -876,7 +893,6 @@ namespace sipdotnet
             linphone_core_terminate_all_calls (linphoneCore);
 
 			SetTimeout (delegate {
-                linphone_call_params_unref (callsDefaultParams);
 
 				if (linphone_proxy_config_is_registered (proxy_cfg)) {
 					linphone_proxy_config_edit (proxy_cfg);
@@ -908,7 +924,7 @@ namespace sipdotnet
                 Marshal.FreeHGlobal(t_configPtr);
             registration_state_changed = null;
             call_state_changed = null;
-            linphoneCore = callsDefaultParams = proxy_cfg = auth_info = t_configPtr = IntPtr.Zero;
+            linphoneCore = proxy_cfg = auth_info = t_configPtr = IntPtr.Zero;
             coreLoop = null;
             identity = null;
             server_addr = null;
@@ -970,41 +986,49 @@ namespace sipdotnet
 
 		public void MakeCall (string uri)
 		{
-			if (linphoneCore == IntPtr.Zero || !running) {
-                ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
-                return;
-			}
-
-			IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callsDefaultParams);
-
-			if (call == IntPtr.Zero) {
-                ErrorEvent?.Invoke(null, "Cannot call.");
-                return;
-			}
-
-            linphone_call_ref(call);
+            MakeCallAndRecord(uri, null, false);
         }
 
-		public void MakeCallAndRecord (string uri, string filename)
+		public void MakeCallAndRecord (string uri, string filename, bool startRecordInstantly = true)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) {
                 ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
                 return;
 			}
 
-			linphone_call_params_set_record_file (callsDefaultParams, filename);
+            IntPtr callParams = createDefaultCallParams();
 
-			IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callsDefaultParams);
+            if (!string.IsNullOrEmpty(filename)) 
+                linphone_call_params_set_record_file (callParams, filename);
+
+            IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callParams);
 			if (call == IntPtr.Zero) {
                 ErrorEvent?.Invoke(null, "Cannot call.");
                 return;
 			}
 
             linphone_call_ref(call);
-            linphone_call_start_recording (call);
+            if (startRecordInstantly)
+            {
+                linphone_call_start_recording(call);
+            }
 		}
 
-		public void ReceiveCallAndRecord (Call call, string filename)
+        public void StartRecording (Call call)
+        {
+            LinphoneCall linphonecall = (LinphoneCall)call;
+            if (!string.IsNullOrEmpty(linphonecall.GetRecordfile()))
+                linphone_call_start_recording (linphonecall.LinphoneCallPtr);
+        }
+
+        public void PauseRecording (Call call)
+        {
+            LinphoneCall linphonecall = (LinphoneCall)call;
+            if (!string.IsNullOrEmpty(linphonecall.GetRecordfile()))
+                linphone_call_stop_recording (linphonecall.LinphoneCallPtr);
+        }
+
+		public void ReceiveCallAndRecord (Call call, string filename, bool startRecordInstantly = true)
 		{
 			if (call == null)
 				throw new ArgumentNullException ("call");
@@ -1016,26 +1040,23 @@ namespace sipdotnet
 
 			LinphoneCall linphonecall = (LinphoneCall) call;
             linphone_call_ref(linphonecall.LinphoneCallPtr);
-            linphone_call_params_set_record_file (callsDefaultParams, filename);
-			linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callsDefaultParams);
-			linphone_call_start_recording (linphonecall.LinphoneCallPtr);
+
+            IntPtr callParams = createDefaultCallParams();
+
+            if (!string.IsNullOrEmpty(filename))
+                linphone_call_params_set_record_file (callParams, filename);
+
+            linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callParams);
+            if (startRecordInstantly)
+            {
+                linphone_call_start_recording(linphonecall.LinphoneCallPtr);
+            }
 		}
 
 		public void ReceiveCall (Call call)
 		{
-			if (call == null)
-				throw new ArgumentNullException ("call");
-
-			if (linphoneCore == IntPtr.Zero || !running) {
-                ErrorEvent?.Invoke(call, "Cannot receive call when Linphone Core is not working.");
-                return;
-			}
-
-			LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_call_ref(linphonecall.LinphoneCallPtr);
-            linphone_call_params_set_record_file (callsDefaultParams, null);
-			linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callsDefaultParams);
-		}
+            ReceiveCallAndRecord(call, null, false);
+        }
 
 		void OnRegistrationChanged (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message) 
 		{
@@ -1055,10 +1076,16 @@ namespace sipdotnet
 			Call.CallType newtype = Call.CallType.None;
 			string from = "";
 			string to = "";
-            IntPtr addressStringPtr;
+            string recordfile = "";
+            IntPtr recordfileStringPtr, addressStringPtr;
 
-			// detecting direction, state and source-destination data by state
-			switch (cstate) {
+            IntPtr callParams = linphone_call_get_params (call);
+            recordfileStringPtr = linphone_call_params_get_record_file (callParams);
+            if (recordfileStringPtr != IntPtr.Zero)
+                recordfile = Marshal.PtrToStringAnsi(recordfileStringPtr);
+
+            // detecting direction, state and source-destination data by state
+            switch (cstate) {
 				case LinphoneCallState.LinphoneCallIncomingReceived:
 				case LinphoneCallState.LinphoneCallIncomingEarlyMedia:
 					newstate = Call.CallState.Loading;
@@ -1093,8 +1120,8 @@ namespace sipdotnet
 				case LinphoneCallState.LinphoneCallReleased:
 				case LinphoneCallState.LinphoneCallEnd:
 					newstate = Call.CallState.Completed;
-					if (linphone_call_params_get_record_file (callsDefaultParams) != IntPtr.Zero)
-						linphone_call_stop_recording (call);
+                    if (!string.IsNullOrEmpty(recordfile))
+                        linphone_call_stop_recording(call);
 					break;
 
 				default:
@@ -1111,7 +1138,8 @@ namespace sipdotnet
 				existCall.SetCallType (newtype);
 				existCall.SetFrom (from);
 				existCall.SetTo (to);
-				existCall.LinphoneCallPtr = callref;
+                existCall.SetRecordFile (recordfile);
+                existCall.LinphoneCallPtr = callref;
 
 				calls.Add (existCall);
 
@@ -1125,7 +1153,7 @@ namespace sipdotnet
 
             if (cstate == LinphoneCallState.LinphoneCallReleased)
             {
-                linphone_call_unref(existCall.LinphoneCallPtr);
+                linphone_call_unref (existCall.LinphoneCallPtr);
                 calls.Remove(existCall);
             }
         }

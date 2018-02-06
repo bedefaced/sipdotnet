@@ -268,7 +268,26 @@ namespace sipdotnet
             }
 		}
 
-		public void MakeCallAndRecord (string sipUriOrPhone, string filename)
+        public void MakeCallManualRecord (string sipUriOrPhone, string filename)
+        {
+            if (string.IsNullOrEmpty(sipUriOrPhone))
+                throw new ArgumentNullException("sipUriOrPhone");
+
+            if (string.IsNullOrEmpty(filename))
+                throw new ArgumentNullException("filename");
+
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+
+            if (lineState == LineState.Free)
+                linphone.MakeCallAndRecord(sipUriOrPhone, filename, false);
+            else
+            {
+                ErrorEvent?.Invoke(null, Error.LineIsBusyError);
+            }
+        }
+
+        public void MakeCallAndRecord (string sipUriOrPhone, string filename)
 		{
 			if (string.IsNullOrEmpty(sipUriOrPhone))
 				throw new ArgumentNullException ("sipUriOrPhone");
@@ -286,7 +305,19 @@ namespace sipdotnet
             }
 		}
 
-		public void ReceiveCallAndRecord (Call call, string filename)
+        public void ReceiveCallManualRecord(Call call, string filename)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+            if (string.IsNullOrEmpty(filename))
+                throw new ArgumentNullException("filename");
+
+            linphone.ReceiveCallAndRecord(call, filename, false);
+        }
+
+        public void ReceiveCallAndRecord (Call call, string filename)
 		{
             if (connectState != ConnectState.Connected)
                 throw new InvalidOperationException("not connected");
@@ -297,6 +328,24 @@ namespace sipdotnet
 
 			linphone.ReceiveCallAndRecord (call, filename);
 		}
+
+        public void StartRecording (Call call)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+            linphone.StartRecording (call);
+        }
+
+        public void PauseRecording (Call call)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+            linphone.PauseRecording (call);
+        }
 
 		public void ReceiveCall (Call call)
 		{
