@@ -606,6 +606,12 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern int linphone_call_send_dtmfs (IntPtr call, string dtmfs);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_pause_call (IntPtr lc, IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_resume_call (IntPtr lc, IntPtr call);
+
         #endregion
 
         #region Authentication
@@ -650,6 +656,42 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern void linphone_core_set_ringback (IntPtr lc, string file);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_reload_sound_devices (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern bool linphone_core_sound_device_can_capture (IntPtr lc, string device);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern bool linphone_core_sound_device_can_playback (IntPtr lc, string device);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_get_ringer_device (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_get_playback_device (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_get_capture_device (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_set_ringer_device (IntPtr lc, string devid);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_set_playback_device (IntPtr lc, string devid);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_core_set_capture_device (IntPtr lc, string devid);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern void linphone_core_enable_mic (IntPtr lc, bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern bool linphone_core_mic_enabled (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern IntPtr linphone_core_get_sound_devices (IntPtr lc);
 
         #endregion
 
@@ -780,13 +822,151 @@ namespace sipdotnet
             return callParams;
         }
 
-        Linphone()
+        public bool MicrophoneEnabled
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                return linphone_core_mic_enabled(linphoneCore);
+            }
+            
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_enable_mic(linphoneCore, value);
+            }
+        }
+
+        public string RingerDevice
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                IntPtr devChar = linphone_core_get_ringer_device(linphoneCore);
+
+                return Marshal.PtrToStringAnsi(devChar);
+            }
+
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_set_ringer_device(linphoneCore, value);
+            }
+        }
+
+        public string PlaybackDevice
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                IntPtr devChar = linphone_core_get_playback_device(linphoneCore);
+
+                return Marshal.PtrToStringAnsi(devChar);
+            }
+
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_set_playback_device(linphoneCore, value);
+            }
+        }
+
+        public string CaptureDevice
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                IntPtr devChar = linphone_core_get_capture_device(linphoneCore);
+
+                return Marshal.PtrToStringAnsi(devChar);
+            }
+
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_set_capture_device(linphoneCore, value);
+            }
+        }
+
+        public List<string> GetPlaybackDevices()
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+                throw new InvalidOperationException("linphoneCore not started");
+
+            List<string> devList = new List<string>();
+
+            linphone_core_reload_sound_devices(linphoneCore);
+
+            IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
+
+            if (listPtr != IntPtr.Zero)
+            {
+                IntPtr ptr = Marshal.ReadIntPtr(listPtr);
+                while (ptr != IntPtr.Zero)
+                {
+                    string device = Marshal.PtrToStringAnsi(ptr);
+
+                    if (linphone_core_sound_device_can_playback(linphoneCore, device)) 
+                        devList.Add(device);
+
+                    listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
+                    ptr = Marshal.ReadIntPtr(listPtr);
+                }
+            }
+
+            return devList;
+        }
+
+        public List<string> GetCaptureDevices()
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+                throw new InvalidOperationException("linphoneCore not started");
+
+            List<string> devList = new List<string>();
+
+            linphone_core_reload_sound_devices(linphoneCore);
+
+            IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
+
+            if (listPtr != IntPtr.Zero)
+            {
+                IntPtr ptr = Marshal.ReadIntPtr(listPtr);
+                while (ptr != IntPtr.Zero)
+                {
+                    string device = Marshal.PtrToStringAnsi(ptr);
+
+                    if (linphone_core_sound_device_can_capture(linphoneCore, device))
+                        devList.Add(device);
+
+                    listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
+                    ptr = Marshal.ReadIntPtr(listPtr);
+                }
+            }
+
+            return devList;
+        }
+
+        public Linphone ()
         {
             linphone_core_disable_logs();
             linphone_core_set_log_level(OrtpLogLevel.END);
         }
-
-
         
         public void CreatePhone (string username, string password, string server, int port, string agent, string version,
             bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server)
@@ -1051,7 +1231,37 @@ namespace sipdotnet
                 linphone_call_stop_recording (linphonecall.LinphoneCallPtr);
         }
 
-		public void ReceiveCallAndRecord (Call call, string filename, bool startRecordInstantly = true)
+        public void PauseCall (Call call)
+        {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
+            LinphoneCall linphonecall = (LinphoneCall) call;
+            linphone_core_pause_call(linphoneCore, linphonecall.LinphoneCallPtr);
+        }
+
+        public void ResumeCall (Call call)
+        {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
+            LinphoneCall linphonecall = (LinphoneCall) call;
+            linphone_core_resume_call(linphoneCore, linphonecall.LinphoneCallPtr);
+        }
+
+        public void ReceiveCallAndRecord (Call call, string filename, bool startRecordInstantly = true)
 		{
 			if (call == null)
 				throw new ArgumentNullException ("call");

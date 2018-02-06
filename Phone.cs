@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace sipdotnet
@@ -367,6 +368,26 @@ namespace sipdotnet
 			linphone.TerminateCall (call);
 		}
 
+        public void PauseCall (Call call)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            linphone.PauseCall(call);
+        }
+
+        public void ResumeCall (Call call)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            linphone.ResumeCall(call);
+        }
+
         public void SendDTMFs (Call call, string dtmfs)
         {
             if (connectState != ConnectState.Connected)
@@ -393,6 +414,98 @@ namespace sipdotnet
                 throw new InvalidOperationException("not connected");
 
             linphone.SetRingbackSound (filename);
+        }
+
+        public List<string> PlaybackDevices()
+        {
+            if (linphone == null)
+                throw new InvalidOperationException("phone not connected");
+
+            return linphone.GetPlaybackDevices();
+        }
+
+        public List<string> CaptureDevices ()
+        {
+            if (linphone == null)
+                throw new InvalidOperationException("phone not connected");
+
+            return linphone.GetCaptureDevices();
+        }
+
+        public bool MicrophoneEnabled
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.MicrophoneEnabled;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.MicrophoneEnabled = value;
+            }
+        }
+
+        public string RingerDevice
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.RingerDevice;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.RingerDevice = value;
+            }
+        }
+
+        public string PlaybackDevice
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.PlaybackDevice;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.PlaybackDevice = value;
+            }
+        }
+
+        public string CaptureDevice
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.CaptureDevice;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.CaptureDevice = value;
+            }
         }
 
     }
