@@ -160,35 +160,35 @@ namespace sipdotnet
 			}
 		}
 
-		Linphone linphone;
+		LinphoneWrapper linphone;
 
 		public Phone (Account account)
 		{
 			Debug.Assert (null != account, "Phone requires an Account to make calls.");
 			this.account = account;
-			linphone = new Linphone ();
-			linphone.RegistrationStateChangedEvent += (Linphone.LinphoneRegistrationState state) => {
+			linphone = new LinphoneWrapper ();
+			linphone.RegistrationStateChangedEvent += (LinphoneRegistrationState state) => {
 				switch (state) {
-					case Linphone.LinphoneRegistrationState.LinphoneRegistrationProgress:
+					case LinphoneRegistrationState.LinphoneRegistrationProgress:
 						connectState = ConnectState.Progress;
 						break;
 
-					case Linphone.LinphoneRegistrationState.LinphoneRegistrationFailed:
+					case LinphoneRegistrationState.LinphoneRegistrationFailed:
                         linphone.DestroyPhone();
                         ErrorEvent?.Invoke(null, Error.RegisterFailed);
                         break;
 
-					case Linphone.LinphoneRegistrationState.LinphoneRegistrationCleared:
+					case LinphoneRegistrationState.LinphoneRegistrationCleared:
 						connectState = ConnectState.Disconnected;
                         PhoneDisconnectedEvent?.Invoke();
                         break;
 
-					case Linphone.LinphoneRegistrationState.LinphoneRegistrationOk:
+					case LinphoneRegistrationState.LinphoneRegistrationOk:
 						connectState = ConnectState.Connected;
                         PhoneConnectedEvent?.Invoke();
                         break;
 
-					case Linphone.LinphoneRegistrationState.LinphoneRegistrationNone:
+					case LinphoneRegistrationState.LinphoneRegistrationNone:
 					default:
 						break;
 				}
@@ -200,7 +200,7 @@ namespace sipdotnet
             };
 
 			linphone.CallStateChangedEvent += (Call call) => {
-				Call.CallState state = call.GetState();
+				Call.CallState state = call.State;
 
 				switch (state) {
 				case Call.CallState.Active:
@@ -210,7 +210,7 @@ namespace sipdotnet
 
 				case Call.CallState.Loading:
 					lineState = LineState.Busy;
-					if (call.GetCallType () == Call.CallType.Incoming)
+					if (call.Type == Call.CallType.Incoming)
                             IncomingCallEvent?.Invoke(call);
                         break;
 

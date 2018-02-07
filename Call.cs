@@ -13,9 +13,12 @@ namespace sipdotnet
 
 		protected CallType calltype = CallType.None;
 
-		public CallType GetCallType ()
+		public CallType Type 
 		{
-			return this.calltype;
+			get
+            {
+                return this.calltype;
+            }
 		}
 
 		public enum CallState
@@ -29,30 +32,42 @@ namespace sipdotnet
 
 		protected CallState callstate = CallState.None;
 
-		public CallState GetState ()
+		public CallState State
 		{
-			return this.callstate;
+            get
+            {
+                return this.callstate;
+            }
 		}
 
 		protected string from;
 
-		public string GetFrom ()
+		public string From
 		{
-			return this.from; 
+            get
+            {
+                return this.from;
+            }
 		}
 
 		protected string to;
 
-		public string GetTo ()
+		public string To
 		{
-			return this.to; 
+            get
+            {
+                return this.to;
+            }
 		}
 
         protected string recordfile;
 
-        public string GetRecordfile ()
+        public string Recordfile
         {
-            return this.recordfile;
+            get
+            {
+                return this.recordfile;
+            }
         }
     }
 }

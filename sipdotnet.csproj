@@ -36,10 +36,12 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DllLoadUtils.cs" />
+    <Compile Include="Linphone.cs" />
     <Compile Include="NatPolicy.cs" />
     <Compile Include="Phone.cs" />
     <Compile Include="Account.cs" />
-    <Compile Include="Linphone.cs" />
+    <Compile Include="LinphoneWrapper.cs" />
     <Compile Include="Call.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
