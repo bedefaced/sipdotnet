@@ -388,6 +388,26 @@ namespace sipdotnet
             linphone.ResumeCall(call);
         }
 
+        public void RedirectCall (Call call, string redirectURI)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            linphone.RedirectCall(call, redirectURI);
+        }
+
+        public void TransferCall (Call call, string redirectURI)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            linphone.TransferCall(call, redirectURI);
+        }
+
         public void SendDTMFs (Call call, string dtmfs)
         {
             if (connectState != ConnectState.Connected)

@@ -612,6 +612,12 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         static extern int linphone_core_resume_call (IntPtr lc, IntPtr call);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_call_redirect (IntPtr lc, IntPtr call, string redirect_uri);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        static extern int linphone_call_transfer (IntPtr lc, IntPtr call, string redirect_uri);
+        
         #endregion
 
         #region Authentication
@@ -1261,6 +1267,36 @@ namespace sipdotnet
             linphone_core_resume_call(linphoneCore, linphonecall.LinphoneCallPtr);
         }
 
+        public void RedirectCall (Call call, string redirect_uri)
+        {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
+            LinphoneCall linphonecall = (LinphoneCall) call;
+            linphone_call_redirect(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+        }
+
+        public void TransferCall (Call call, string redirect_uri)
+        {
+            if (call == null)
+                throw new ArgumentNullException("call");
+
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                return;
+            }
+
+            LinphoneCall linphonecall = (LinphoneCall) call;
+            linphone_call_transfer(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+        }
+
         public void ReceiveCallAndRecord (Call call, string filename, bool startRecordInstantly = true)
 		{
 			if (call == null)
@@ -1325,7 +1361,7 @@ namespace sipdotnet
 					newtype = Call.CallType.Incoming;
                     addressStringPtr = linphone_call_get_remote_address_as_string(call);
                     if (addressStringPtr != IntPtr.Zero) from = Marshal.PtrToStringAnsi(addressStringPtr);
-					to = identity;
+                    to = identity;
 					break;
 
 				case LinphoneCallState.LinphoneCallConnected:
