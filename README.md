@@ -6,7 +6,7 @@ Small .NET wrapper for [liblinphone](http://www.linphone.org/eng/documentation/d
 Using
 -----
 
-You can access to wrapped liblinphone actions and events by `Phone` class. Only that you need is the SIP account (`Account` class).
+You can access to wrapped liblinphone actions and events by `Phone` class. Only that you need is the SIP account (`Account` class), [sipdotnet.dll](https://github.com/bedefaced/sipdotnet/blob/dev/lib/sipdotnet.zip) and linphone libraries (see *Requirements* section).
 
 Current available functionality:
 
@@ -14,22 +14,27 @@ Current available functionality:
      - `Connect`
      - `Disconnect`
      - `Useragent` and `Version` definition
+	 - (experimental) `NatPolicy` - support for different firewall / NAT policy
  - Call / Register / Error events:
-     - `PhoneConnectedEvent`
-     - `PhoneDisconnectedEvent`
-     - `IncomingCallEvent`
-     - `CallActiveEvent`
-     - `CallCompletedEvent`
-     - `ErrorEvent`
+     - `PhoneConnectedEvent` - when phone connected to SIP-proxy
+     - `PhoneDisconnectedEvent` - when phone disconnected from SIP-proxy
+     - `IncomingCallEvent` - when incoming call appears
+     - `CallActiveEvent` - when conversation started (resumed)
+     - `CallCompletedEvent` - when call completed
+     - `ErrorEvent` - when any error (sequence is broken, for example)
+	 - `LogEvent` - when new Linphone raw log record appears
  - Make / receive / terminate / record calls:
-     - `MakeCall`
-     - `MakeCallAndRecord`
-     - `ReceiveCall`
-     - `ReceiveCallAndRecord`
-     - `TerminateCall`
+     - `MakeCall` - call making
+     - `MakeCallAndRecord` - for call making with conversation recording (to WAV file)
+     - `ReceiveCall` - for call receiving
+     - `ReceiveCallAndRecord` - for call receiving with conversation recording (to WAV file)
+     - `TerminateCall` - for call termination
+	 - (experimental) `RedirectCall`, `TransferCall` - for call redirecting and transferring (during active conversation)
+	 - (experimental) `StartRecording`, `PauseRecording` - for manual call recording control during call
  - Utilities:
 	 - `SendDTMFs` (sending DTMF-tones)
 	 - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
+	 - (experimental) `PlaybackDevices`, `CaptureDevices`, `MicrophoneEnabled`, `RingerDevice`, `PlaybackDevice`, `CaptureDevice` - viewing and controlling audio devices used by phone
 
 Example
 -------
@@ -46,6 +51,10 @@ phone.CallActiveEvent += delegate(Call call) {
 phone.CallCompletedEvent += delegate(Call call) {
 	Console.WriteLine("Completed.");
 };
+phone.LogEvent += delegate (string message)
+{
+	Console.WriteLine("[DEBUG] " + message);
+};
 phone.Connect (); // connecting
 Console.ReadLine ();
 Console.WriteLine("Disconnecting...");
@@ -57,6 +66,7 @@ Requirements
 
 * .NET 4.0 framework on Windows or Linux (>= Mono 3.2.8)
 * last available (4.1.1) liblinphone library binaries installed
+* x86 - project type (linphone dlls constraints)
 
 Liblinphone on Windows
 ----------------------
@@ -67,6 +77,11 @@ Liblinphone on Linux
 --------------------
 1) Install [Mono](http://www.mono-project.com/download/#download-lin)
 2) Build manually from [sources](https://github.com/BelledonneCommunications/linphone), or use [my bash script](https://gist.github.com/bedefaced/3dc4e58c700dada43054f49a3053dcad) for Ubuntu 16.04.
+
+See also
+--------------------
+* [Liblinphone docs](http://www.linphone.org/technical-corner/liblinphone/documentation)
+* [Liblinphone official wrapper](https://wiki.linphone.org/xwiki/wiki/public/view/Lib/Getting%20started/Xamarin/)
 
 License
 -------
