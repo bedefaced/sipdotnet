@@ -84,6 +84,7 @@ See also
 --------------------
 * [Liblinphone docs](http://www.linphone.org/technical-corner/liblinphone/documentation)
 * [Liblinphone official wrapper](https://wiki.linphone.org/xwiki/wiki/public/view/Lib/Getting%20started/Xamarin/)
+* [OfficeSIP](http://www.officesip.com) - useful and minimalistic SIP-server for testing (Note: it may be necessary to add *localhost* record to */etc/hosts* file)
 
 License
 -------
