@@ -6,7 +6,7 @@ Small .NET wrapper for [liblinphone](http://www.linphone.org/eng/documentation/d
 Using
 -----
 
-You can access to wrapped liblinphone actions and events by `Phone` class. Only that you need is the SIP account (`Account` class), [sipdotnet.dll](https://github.com/bedefaced/sipdotnet/blob/dev/lib/sipdotnet.zip) and linphone libraries (see *Requirements* section).
+You can access to wrapped liblinphone actions and events by `Phone` class. Only that you need is the SIP account (`Account` class).
 
 For using library from .NET code you need to copy linphone dlls ([liblinphone and dependencies](https://github.com/bedefaced/sipdotnet#requirements)) to directory with your EXE file (or use, for example, [Add item](https://msdn.microsoft.com/en-us/library/9f4t9t92(v=vs.100).aspx) dialog in Visual Studio (and select *Copy to Output*: `Copy if newer` or `Copy always` in `Properties` window of added dlls)) and then add `sipdotnet.dll` (or the whole project) as dependency to your solution.
 
@@ -16,7 +16,7 @@ Current available functionality:
      - `Connect`
      - `Disconnect`
      - `Useragent` and `Version` definition
-	 - (experimental) `NatPolicy` - support for different firewall / NAT policy
+     - (experimental) `NatPolicy` - support for different firewall / NAT policy
  - Call / Register / Error events:
      - `PhoneConnectedEvent` - when phone connected to SIP-proxy
      - `PhoneDisconnectedEvent` - when phone disconnected from SIP-proxy
@@ -24,19 +24,19 @@ Current available functionality:
      - `CallActiveEvent` - when conversation started (resumed)
      - `CallCompletedEvent` - when call completed
      - `ErrorEvent` - when any error (sequence is broken, for example)
-	 - `LogEvent` - when new Linphone raw log record appears
+     - `LogEvent` - when new Linphone raw log record appears
  - Make / receive / terminate / record calls:
      - `MakeCall` - call making
      - `MakeCallAndRecord` - for call making with conversation recording (to WAV file)
      - `ReceiveCall` - for call receiving
      - `ReceiveCallAndRecord` - for call receiving with conversation recording (to WAV file)
      - `TerminateCall` - for call termination
-	 - (experimental) `RedirectCall`, `TransferCall` - for call redirecting and transferring (during active conversation)
-	 - (experimental) `StartRecording`, `PauseRecording` - for manual call recording control during call
+     - (experimental) `RedirectCall`, `TransferCall` - for call redirecting and transferring (during active conversation)
+     - (experimental) `StartRecording`, `PauseRecording` - for manual call recording control during call
  - Utilities:
-	 - `SendDTMFs` (sending DTMF-tones)
-	 - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
-	 - (experimental) `PlaybackDevices`, `CaptureDevices`, `MicrophoneEnabled`, `RingerDevice`, `PlaybackDevice`, `CaptureDevice` - viewing and controlling audio devices used by phone
+     - `SendDTMFs` (sending DTMF-tones)
+     - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
+     - (experimental) `PlaybackDevices`, `CaptureDevices`, `MicrophoneEnabled`, `RingerDevice`, `PlaybackDevice`, `CaptureDevice` - viewing and controlling audio devices used by phone
 
 Example
 -------
