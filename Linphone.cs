@@ -441,6 +441,9 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_log_level (OrtpLogLevel loglevel);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_core_set_log_handler (IntPtr logfunc);
+
         #endregion
 
         #region Proxies

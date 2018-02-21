@@ -54,6 +54,10 @@ namespace sipdotnet
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LinphoneCoreCallStateChangedCb (IntPtr lc, IntPtr call, LinphoneCallState cstate, string message);
 
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        delegate void LogEventCb (string domain, OrtpLogLevel lev, string fmt, IntPtr args);
+
+        LogEventCb logevent_cb;
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
         IntPtr linphoneCore, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
@@ -85,6 +89,12 @@ namespace sipdotnet
                 if (logEventHandler == null && LogsEnabled)
                 {
                     linphone_core_set_log_level(OrtpLogLevel.DEBUG);
+                    if (logevent_cb == null)
+                    {
+                        logevent_cb = new LogEventCb(LinphoneLogEvent);
+                    }
+
+                    linphone_core_set_log_handler(Marshal.GetFunctionPointerForDelegate(logevent_cb));
                 }
                 logEventHandler += value;
             }
@@ -760,6 +770,11 @@ namespace sipdotnet
             }
         }
 
-	}
+        void LinphoneLogEvent (string domain, OrtpLogLevel lev, string fmt, IntPtr args)
+        {
+            logEventHandler?.Invoke(DllLoadUtils.ProcessVAlist(fmt, args));
+        }
+
+    }
 }
 
