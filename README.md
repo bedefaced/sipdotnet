@@ -17,7 +17,7 @@ Current available functionality:
      - `Disconnect`
      - `Useragent` and `Version` definition
      - (experimental) `NatPolicy` - support for different firewall / NAT policy
- - Call / Register / Error events:
+ - Call / Register / Message / Error events:
      - `PhoneConnectedEvent` - when phone connected to SIP-proxy
      - `PhoneDisconnectedEvent` - when phone disconnected from SIP-proxy
      - `IncomingCallEvent` - when incoming call appears
@@ -25,7 +25,8 @@ Current available functionality:
      - `CallCompletedEvent` - when call completed
      - `ErrorEvent` - when any error (sequence is broken, for example)
      - `LogEvent` - when new Linphone raw log record appears
- - Make / receive / terminate / record calls:
+     - (experimental) `MessageReceivedEvent` - when new message received
+ - Make / receive / terminate / record calls & sending messages:
      - `MakeCall` - call making
      - `MakeCallAndRecord` - for call making with conversation recording (to WAV file)
      - `ReceiveCall` - for call receiving
@@ -33,6 +34,7 @@ Current available functionality:
      - `TerminateCall` - for call termination
      - (experimental) `RedirectCall`, `TransferCall` - for call redirecting and transferring (during active conversation)
      - (experimental) `StartRecording`, `PauseRecording` - for manual call recording control during call
+     - (experimental) `SendMessage` - message sending
  - Utilities:
      - `SendDTMFs` (sending DTMF-tones)
      - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
