@@ -586,6 +586,9 @@ namespace sipdotnet
         public static extern IntPtr linphone_call_get_remote_address_as_string (IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_address_as_string (IntPtr address);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr linphone_address_as_string_uri_only (IntPtr address);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
@@ -698,6 +701,26 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr linphone_core_get_sound_devices (IntPtr lc);
+
+        #endregion
+
+        #region Chat
+        // http://www.linphone.org/docs/liblinphone/group__chatroom.html
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_core_get_chat_room_from_uri (IntPtr lc, string to);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_chat_room_send_chat_message (IntPtr chatroom, IntPtr chatmessage);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_chat_room_create_message (IntPtr chatroom, string chatmessage);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_chat_room_get_peer_address (IntPtr chatroom);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_chat_message_get_text (IntPtr chatmessage);
 
         #endregion
 

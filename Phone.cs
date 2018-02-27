@@ -86,6 +86,12 @@ namespace sipdotnet
 		public delegate void OnCallCompleted (Call call);
 
         /// <summary>
+        /// Message received
+        /// </summary>
+        /// <param name="call"></param>
+        public delegate void OnMessageReceived (string from, string message);
+
+        /// <summary>
         /// Error notification
         /// </summary>
         /// <param name="call"></param>
@@ -103,7 +109,8 @@ namespace sipdotnet
 		public event OnIncomingCall IncomingCallEvent;
 		public event OnCallActive CallActiveEvent;
 		public event OnCallCompleted CallCompletedEvent;
-		public event OnError ErrorEvent;
+        public event OnMessageReceived MessageReceivedEvent;
+        public event OnError ErrorEvent;
 
         private event OnLog logEventHandler;
         public event OnLog LogEvent
@@ -225,8 +232,12 @@ namespace sipdotnet
                         CallCompletedEvent?.Invoke(call);
                         break;
 				}
-
 			};
+
+            linphone.MessageReceivedEvent += (string from, string message) =>
+            {
+                MessageReceivedEvent?.Invoke(from, message);
+            };
 		}
 
         public void Connect(NatPolicy natPolicy)
@@ -329,6 +340,18 @@ namespace sipdotnet
 
 			linphone.ReceiveCallAndRecord (call, filename);
 		}
+
+        public void SendMessage (string to, string message)
+        {
+            if (connectState != ConnectState.Connected)
+                throw new InvalidOperationException("not connected");
+            if (string.IsNullOrEmpty(to))
+                throw new ArgumentNullException("to");
+            if (string.IsNullOrEmpty(message))
+                throw new ArgumentNullException("message");
+
+            linphone.SendMessage(to, message);
+        }
 
         public void StartRecording (Call call)
         {

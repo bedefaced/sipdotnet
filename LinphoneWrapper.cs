@@ -57,9 +57,13 @@ namespace sipdotnet
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LogEventCb (string domain, OrtpLogLevel lev, string fmt, IntPtr args);
 
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        delegate void LinphoneCoreCbsMessageReceivedCb (IntPtr lc, IntPtr room, IntPtr message);
+
         LogEventCb logevent_cb;
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
+        LinphoneCoreCbsMessageReceivedCb message_received;
         IntPtr linphoneCore, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
         Thread coreLoop;
         bool running = true;
@@ -77,6 +81,9 @@ namespace sipdotnet
 
         public delegate void ErrorDelegate (Call call, string message);
         public event ErrorDelegate ErrorEvent;
+
+        public delegate void MessageReceivedDelegate (string from, string message);
+        public event MessageReceivedDelegate MessageReceivedEvent;
 
         private bool logsEnabled = false;
         public bool LogsEnabled { get => logsEnabled; set => logsEnabled = value; }
@@ -311,6 +318,7 @@ namespace sipdotnet
 
             registration_state_changed = new LinphoneCoreRegistrationStateChangedCb(OnRegistrationChanged);
             call_state_changed = new LinphoneCoreCallStateChangedCb(OnCallStateChanged);
+            message_received = new LinphoneCoreCbsMessageReceivedCb(OnMessageReceived);
 
 #pragma warning disable 0612
             vtable = new LinphoneCoreVTable()
@@ -324,7 +332,7 @@ namespace sipdotnet
                 auth_info_requested = IntPtr.Zero,
                 authentication_requested = IntPtr.Zero,
                 call_log_updated = IntPtr.Zero,
-                message_received = IntPtr.Zero,
+                message_received = Marshal.GetFunctionPointerForDelegate(message_received),
                 message_received_unable_decrypt = IntPtr.Zero,
                 is_composing_received = IntPtr.Zero,
                 dtmf_received = IntPtr.Zero,
@@ -657,6 +665,19 @@ namespace sipdotnet
             ReceiveCallAndRecord(call, null, false);
         }
 
+        public void SendMessage (string to, string message)
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+            {
+                ErrorEvent?.Invoke(null, "Cannot send messages when Linphone Core is not working.");
+                return;
+            }
+
+            IntPtr chat_room = linphone_core_get_chat_room_from_uri (linphoneCore, to);
+            IntPtr chat_message = linphone_chat_room_create_message (chat_room, message);
+            linphone_chat_room_send_chat_message(chat_room, chat_message);
+        }
+
 		void OnRegistrationChanged (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message) 
 		{
 			if (linphoneCore == IntPtr.Zero || !running) return;
@@ -773,6 +794,22 @@ namespace sipdotnet
         void LinphoneLogEvent (string domain, OrtpLogLevel lev, string fmt, IntPtr args)
         {
             logEventHandler?.Invoke(DllLoadUtils.ProcessVAlist(fmt, args));
+        }
+
+        void OnMessageReceived (IntPtr lc, IntPtr room, IntPtr message)
+        {
+            IntPtr from = linphone_chat_room_get_peer_address(room);
+            if (from != IntPtr.Zero)
+            {
+                IntPtr addressStringPtr = linphone_address_as_string(from);
+                IntPtr chatmessage = linphone_chat_message_get_text(message);
+
+                if (addressStringPtr != IntPtr.Zero && chatmessage != IntPtr.Zero)
+                {
+                    MessageReceivedEvent?.Invoke(Marshal.PtrToStringAnsi(addressStringPtr),
+                        Marshal.PtrToStringAnsi(chatmessage));
+                }
+            }
         }
 
     }
