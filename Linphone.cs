@@ -864,6 +864,11 @@ namespace sipdotnet
 			LinphoneCall linphonecall = (LinphoneCall) call;
 			linphone_core_terminate_call (linphoneCore, linphonecall.LinphoneCallPtr);
         }
+	
+        public void TerminateAllCalls()
+        {
+            linphone_core_terminate_all_calls(linphoneCore);
+        }
 
 		public void MakeCall (string uri)
 		{

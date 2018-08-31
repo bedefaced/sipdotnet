@@ -29,6 +29,8 @@ Current available functionality:
      - `ReceiveCall`
      - `ReceiveCallAndRecord`
      - `TerminateCall`
+     - `TerminateAllCalls` (what's different with this fork compared to [original repo](https://github.com/bedefaced/sipdotnet), thanks again bedefaced)
+
  - Utilities:
 	 - `SendDTMFs` (sending DTMF-tones)
 	 - `SetIncomingRingSound` and `SetRingbackSound` (sound that is heard when it's ringing to remote party)
