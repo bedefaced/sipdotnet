@@ -867,6 +867,11 @@ namespace sipdotnet
 	
         public void TerminateAllCalls()
         {
+			if (linphoneCore == IntPtr.Zero || !running) {
+				if (ErrorEvent != null)
+					ErrorEvent (null, "Cannot terminate calls when Linphone Core is not working.");
+				return;
+			}
             linphone_core_terminate_all_calls(linphoneCore);
         }
 
