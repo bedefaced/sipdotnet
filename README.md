@@ -29,7 +29,7 @@ Current available functionality:
      - `ReceiveCall`
      - `ReceiveCallAndRecord`
      - `TerminateCall`
-     - `TerminateAllCalls` (what's different with this fork compared to [original repo](https://github.com/bedefaced/sipdotnet), thanks again bedefaced)
+     - `TerminateAllCalls`
 
  - Utilities:
 	 - `SendDTMFs` (sending DTMF-tones)
