@@ -11,7 +11,7 @@ namespace sipdotnet
     /// By http://dimitry-i.blogspot.ru/2013/01/mononet-how-to-dynamically-load-native.html
     /// </summary>
 
-    public class DllLoadUtils
+    class DllLoadUtils
     {
 
 #if (WINDOWS)

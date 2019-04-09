@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace sipdotnet
 {
-    public class LinphoneWrapper
+    class LinphoneWrapper
     {
         class LinphoneCall : Call
         {

@@ -10,7 +10,7 @@ namespace sipdotnet
     /// Describes proxy registration states
     /// http://www.linphone.org/docs/liblinphone/group__proxies.html
     /// </summary>
-    public enum LinphoneRegistrationState
+    enum LinphoneRegistrationState
     {
         /// <summary>
         /// Initial state for registrations
