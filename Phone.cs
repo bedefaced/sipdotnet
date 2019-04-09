@@ -513,6 +513,29 @@ namespace sipdotnet
             }
         }
 
+        /// <summary>
+        /// Value is saved and used for subsequent calls. This actually controls software echo cancellation.
+        /// If hardware echo cancellation is available, it will be always used and activated for calls, regardless of the value passed to this function. 
+        /// </summary>
+        public bool EchoCancellationEnabled
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.EchoCancellationEnabled;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.EchoCancellationEnabled = value;
+            }
+        }
+
         public string RingerDevice
         {
             get

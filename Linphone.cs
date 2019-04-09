@@ -617,6 +617,12 @@ namespace sipdotnet
         public static extern int linphone_call_send_dtmfs (IntPtr call, string dtmfs);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool linphone_core_echo_cancellation_enabled (IntPtr call);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_core_enable_echo_cancellation (IntPtr call, bool enabled);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern int linphone_core_pause_call (IntPtr lc, IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]

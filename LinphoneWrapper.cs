@@ -192,6 +192,25 @@ namespace sipdotnet
             }
         }
 
+        public bool EchoCancellationEnabled
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                return linphone_core_echo_cancellation_enabled(linphoneCore);
+            }
+
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_enable_echo_cancellation(linphoneCore, value);
+            }
+        }
+
         public string RingerDevice
         {
             get
