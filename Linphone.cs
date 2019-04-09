@@ -441,6 +441,7 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_log_level (OrtpLogLevel loglevel);
 
+        [Obsolete]
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_log_handler (IntPtr logfunc);
 
@@ -525,6 +526,12 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_nat_policy_resolve_stun_server (IntPtr policy);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool linphone_core_keep_alive_enabled (IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_core_enable_keep_alive (IntPtr lc, bool enable);
 
         #endregion
 

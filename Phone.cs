@@ -112,15 +112,15 @@ namespace sipdotnet
         public event OnMessageReceived MessageReceivedEvent;
         public event OnError ErrorEvent;
 
-        private event OnLog logEventHandler;
-        public event OnLog LogEvent
+        private static event OnLog logEventHandler;
+        public static event OnLog LogEvent
         {
             add
             {
                 logEventHandler += value;
-                if (!linphone.LogsEnabled) {
-                    linphone.LogsEnabled = true;
-                    linphone.LogEvent += (message) =>
+                if (!LinphoneWrapper.LogsEnabled) {
+                    LinphoneWrapper.LogsEnabled = true;
+                    LinphoneWrapper.LogEvent += (message) =>
                     {
                         logEventHandler?.Invoke(message);
                     };
@@ -132,7 +132,7 @@ namespace sipdotnet
                 logEventHandler -= value;
                 if (logEventHandler == null)
                 {
-                    linphone.LogsEnabled = false;
+                    LinphoneWrapper.LogsEnabled = false;
                 }
             }
         }
@@ -491,6 +491,25 @@ namespace sipdotnet
                     throw new InvalidOperationException("phone not connected");
 
                 linphone.MicrophoneEnabled = value;
+            }
+        }
+
+        public bool KeepAliveEnabled
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.KeepAliveEnabled;
+            }
+
+            set
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                linphone.KeepAliveEnabled = value;
             }
         }
 

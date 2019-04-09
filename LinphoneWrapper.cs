@@ -60,7 +60,7 @@ namespace sipdotnet
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LinphoneCoreCbsMessageReceivedCb (IntPtr lc, IntPtr room, IntPtr message);
 
-        LogEventCb logevent_cb;
+        static LogEventCb logevent_cb;
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
         LinphoneCoreCbsMessageReceivedCb message_received;
@@ -85,11 +85,11 @@ namespace sipdotnet
         public delegate void MessageReceivedDelegate (string from, string message);
         public event MessageReceivedDelegate MessageReceivedEvent;
 
-        private bool logsEnabled = false;
-        public bool LogsEnabled { get => logsEnabled; set => logsEnabled = value; }
+        private static bool logsEnabled = false;
+        public static bool LogsEnabled { get => logsEnabled; set => logsEnabled = value; }
         public delegate void LogDelegate (string message);
-        private event LogDelegate logEventHandler;
-        public event LogDelegate LogEvent
+        private static event LogDelegate logEventHandler;
+        public static event LogDelegate LogEvent
         {
             add
             {
@@ -114,6 +114,11 @@ namespace sipdotnet
                     linphone_core_set_log_level(OrtpLogLevel.END);
                 }
             }
+        }
+
+        static void LinphoneLogEvent (string domain, OrtpLogLevel lev, string fmt, IntPtr args)
+        {
+            logEventHandler?.Invoke(DllLoadUtils.ProcessVAlist(fmt, args));
         }
 
 
@@ -165,6 +170,25 @@ namespace sipdotnet
                     throw new InvalidOperationException("linphoneCore not started");
 
                 linphone_core_enable_mic(linphoneCore, value);
+            }
+        }
+
+        public bool KeepAliveEnabled
+        {
+            get
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                return linphone_core_keep_alive_enabled(linphoneCore);
+            }
+
+            set
+            {
+                if (linphoneCore == IntPtr.Zero || !running)
+                    throw new InvalidOperationException("linphoneCore not started");
+
+                linphone_core_enable_keep_alive(linphoneCore, value);
             }
         }
 
@@ -789,11 +813,6 @@ namespace sipdotnet
                 linphone_call_unref (existCall.LinphoneCallPtr);
                 calls.Remove(existCall);
             }
-        }
-
-        void LinphoneLogEvent (string domain, OrtpLogLevel lev, string fmt, IntPtr args)
-        {
-            logEventHandler?.Invoke(DllLoadUtils.ProcessVAlist(fmt, args));
         }
 
         void OnMessageReceived (IntPtr lc, IntPtr room, IntPtr message)
