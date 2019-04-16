@@ -89,6 +89,13 @@ namespace sipdotnet
 			public int tls_port;
         };
 
+        public struct bctbx_list
+        {
+            public IntPtr next;
+            public IntPtr prev;
+            public IntPtr data;
+        }
+
         /// <summary>
         /// Logging level
         /// https://github.com/BelledonneCommunications/ortp/blob/master/include/ortp/logging.h
@@ -430,20 +437,20 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         [System.Obsolete]
-        public static extern IntPtr linphone_core_new (IntPtr vtable, string config_path, string factory_config_path, IntPtr userdata);
+        public static extern IntPtr linphone_core_new ([In] IntPtr vtable, [In] string config_path, [In] string factory_config_path, [In, Out] IntPtr userdata);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_unref (IntPtr lc);
+        public static extern void linphone_core_unref ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_iterate (IntPtr lc);
-        
+        public static extern void linphone_core_iterate ([In, Out] IntPtr lc);
+
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_log_level (OrtpLogLevel loglevel);
+        public static extern void linphone_core_set_log_level ([In, Out] OrtpLogLevel loglevel);
 
         [Obsolete]
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_log_handler (IntPtr logfunc);
+        public static extern void linphone_core_set_log_handler ([In, Out] IntPtr logfunc);
 
         #endregion
 
@@ -452,38 +459,38 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__proxies.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_create_proxy_config (IntPtr lc);
+        public static extern IntPtr linphone_core_create_proxy_config ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_proxy_config_set_identity (IntPtr obj, string identity);
+        public static extern int linphone_proxy_config_set_identity ([In, Out] IntPtr obj, [In] string identity);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_proxy_config_set_server_addr (IntPtr obj, string server_addr);
+        public static extern int linphone_proxy_config_set_server_addr ([In, Out] IntPtr obj, [In] string server_addr);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_proxy_config_enable_register (IntPtr obj, bool val);
+        public static extern void linphone_proxy_config_enable_register ([In, Out] IntPtr obj, [In] bool val);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_add_proxy_config (IntPtr lc, IntPtr cfg);
+        public static extern int linphone_core_add_proxy_config ([In, Out] IntPtr lc, [In, Out] IntPtr cfg);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_default_proxy_config (IntPtr lc, IntPtr config);
+        public static extern void linphone_core_set_default_proxy_config ([In, Out] IntPtr lc, [In, Out] IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         [System.Obsolete]
-        public static extern int linphone_core_get_default_proxy (IntPtr lc, ref IntPtr config);
+        public static extern int linphone_core_get_default_proxy ([In, Out] IntPtr lc, [In, Out] ref IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_proxy_config_is_registered (IntPtr config);
+        public static extern bool linphone_proxy_config_is_registered ([In] IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_proxy_config_edit (IntPtr config);
+        public static extern void linphone_proxy_config_edit ([In, Out] IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_proxy_config_done (IntPtr config);
+        public static extern int linphone_proxy_config_done ([In, Out] IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_proxy_config_set_nat_policy (IntPtr cfg, IntPtr policy);
+        public static extern void linphone_proxy_config_set_nat_policy ([In, Out] IntPtr cfg, [In, Out] IntPtr policy);
 
         #endregion
 
@@ -492,46 +499,46 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__network__parameters.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_set_sip_transports (IntPtr lc, IntPtr tr_config);
+        public static extern int linphone_core_set_sip_transports ([In, Out] IntPtr lc, [In, Out] IntPtr tr_config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_create_nat_policy (IntPtr lc);
+        public static extern IntPtr linphone_core_create_nat_policy ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_unref (IntPtr natpolicy);
+        public static extern void linphone_nat_policy_unref ([In, Out] IntPtr natpolicy);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_nat_policy_ref (IntPtr natpolicy);
+        public static extern IntPtr linphone_nat_policy_ref ([In, Out] IntPtr natpolicy);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_clear (IntPtr policy);
+        public static extern void linphone_nat_policy_clear ([In, Out] IntPtr policy);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_enable_stun (IntPtr policy, bool enable);
+        public static extern void linphone_nat_policy_enable_stun ([In, Out] IntPtr policy, [In] bool enable);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_enable_turn (IntPtr policy, bool enable);
+        public static extern void linphone_nat_policy_enable_turn ([In, Out] IntPtr policy, [In] bool enable);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_enable_ice (IntPtr policy, bool enable);
+        public static extern void linphone_nat_policy_enable_ice ([In, Out] IntPtr policy, [In] bool enable);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_enable_upnp (IntPtr policy, bool enable);
+        public static extern void linphone_nat_policy_enable_upnp ([In, Out] IntPtr policy, [In] bool enable);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_set_stun_server (IntPtr policy, string stun_server);
+        public static extern void linphone_nat_policy_set_stun_server ([In, Out] IntPtr policy, [In] string stun_server);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_set_stun_server_username (IntPtr policy, string username);
+        public static extern void linphone_nat_policy_set_stun_server_username ([In, Out] IntPtr policy, [In] string username);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_nat_policy_resolve_stun_server (IntPtr policy);
+        public static extern void linphone_nat_policy_resolve_stun_server ([In, Out] IntPtr policy);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_core_keep_alive_enabled (IntPtr lc);
+        public static extern bool linphone_core_keep_alive_enabled ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_enable_keep_alive (IntPtr lc, bool enable);
+        public static extern void linphone_core_enable_keep_alive ([In, Out] IntPtr lc, [In] bool enable);
 
         #endregion
 
@@ -541,14 +548,14 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         [System.Obsolete]
-        public static extern void linphone_address_destroy (IntPtr u);
+        public static extern void linphone_address_destroy ([In, Out] IntPtr u);
 
         #endregion
 
         #region Miscenalleous
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_user_agent (IntPtr lc, string ua_name, string version);
+        public static extern void linphone_core_set_user_agent ([In, Out] IntPtr lc, [In] string ua_name, [In] string version);
 
         #endregion
 
@@ -557,82 +564,82 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__call__control.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_create_call_params (IntPtr lc, IntPtr call);
+        public static extern IntPtr linphone_core_create_call_params ([In, Out] IntPtr lc, [In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_params_enable_video (IntPtr lc, bool enabled);
+        public static extern void linphone_call_params_enable_video ([In, Out] IntPtr lc, [In] bool enabled);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_params_enable_early_media_sending (IntPtr lc, bool enabled);
+        public static extern void linphone_call_params_enable_early_media_sending ([In, Out] IntPtr lc, [In] bool enabled);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_invite_with_params (IntPtr lc, string url, IntPtr callparams);
+        public static extern IntPtr linphone_core_invite_with_params ([In, Out] IntPtr lc, [In] string url, [In] IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_get_params (IntPtr call);
+        public static extern IntPtr linphone_call_get_params ([In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_params_ref (IntPtr callparams);
+        public static extern IntPtr linphone_call_params_ref ([In, Out] IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_params_unref (IntPtr callparams);
+        public static extern void linphone_call_params_unref ([In, Out] IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_terminate_call (IntPtr lc, IntPtr call);
+        public static extern int linphone_core_terminate_call ([In, Out] IntPtr lc, [In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_ref (IntPtr call);
+        public static extern IntPtr linphone_call_ref ([In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_unref (IntPtr call);
+        public static extern void linphone_call_unref ([In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_terminate_all_calls (IntPtr lc);
+        public static extern int linphone_core_terminate_all_calls ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_get_remote_address_as_string (IntPtr call);
+        public static extern IntPtr linphone_call_get_remote_address_as_string ([In] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_address_as_string (IntPtr address);
+        public static extern IntPtr linphone_address_as_string ([In] IntPtr address);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_address_as_string_uri_only (IntPtr address);
+        public static extern IntPtr linphone_address_as_string_uri_only ([In] IntPtr address);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_get_to_address (IntPtr call);
+        public static extern IntPtr linphone_call_get_to_address ([In] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_accept_call_with_params (IntPtr lc, IntPtr call, IntPtr callparams);
+        public static extern int linphone_core_accept_call_with_params (IntPtr lc, IntPtr call, [In] IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_params_set_record_file (IntPtr callparams, string filename);
+        public static extern void linphone_call_params_set_record_file ([In, Out] IntPtr callparams, [In] string filename);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_call_params_get_record_file (IntPtr callparams);
+        public static extern IntPtr linphone_call_params_get_record_file ([In] IntPtr callparams);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_params_enable_audio (IntPtr callparams, bool enabled);
+        public static extern void linphone_call_params_enable_audio ([In, Out] IntPtr callparams, [In] bool enabled);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_call_send_dtmfs (IntPtr call, string dtmfs);
+        public static extern int linphone_call_send_dtmfs ([In, Out] IntPtr call, [In] string dtmfs);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_core_echo_cancellation_enabled (IntPtr call);
+        public static extern bool linphone_core_echo_cancellation_enabled ([In] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_enable_echo_cancellation (IntPtr call, bool enabled);
+        public static extern void linphone_core_enable_echo_cancellation ([In, Out] IntPtr call, [In] bool enabled);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_pause_call (IntPtr lc, IntPtr call);
+        public static extern int linphone_core_pause_call ([In, Out] IntPtr lc, [In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_resume_call (IntPtr lc, IntPtr call);
+        public static extern int linphone_core_resume_call ([In, Out] IntPtr lc, [In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_call_redirect (IntPtr lc, IntPtr call, string redirect_uri);
+        public static extern int linphone_call_redirect ([In, Out] IntPtr lc, [In, Out] IntPtr call, [In] string redirect_uri);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_call_transfer (IntPtr lc, IntPtr call, string redirect_uri);
+        public static extern int linphone_call_transfer ([In, Out] IntPtr lc, [In, Out] IntPtr call, [In] string redirect_uri);
 
         #endregion
 
@@ -641,10 +648,10 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__authentication.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_add_auth_info (IntPtr lc, IntPtr info);
+        public static extern void linphone_core_add_auth_info ([In, Out] IntPtr lc, [In] IntPtr info);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_auth_info_new (string username, string userid, string passwd, string ha1, string realm, string domain);
+        public static extern IntPtr linphone_auth_info_new ([In] string username, [In] string userid, [In] string passwd, [In] string ha1, [In] string realm, [In] string domain);
 
         #endregion
 
@@ -653,10 +660,10 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__call__misc.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_start_recording (IntPtr call);
+        public static extern void linphone_call_start_recording ([In, Out] IntPtr call);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_call_stop_recording (IntPtr call);
+        public static extern void linphone_call_stop_recording ([In, Out] IntPtr call);
 
         #endregion
 
@@ -665,55 +672,67 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__media__parameters.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_play_file (IntPtr lc, string file);
+        public static extern void linphone_core_set_play_file ([In, Out] IntPtr lc, [In] string file);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_record_file (IntPtr lc, string file);
+        public static extern void linphone_core_set_record_file ([In, Out] IntPtr lc, [In] string file);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_ring (IntPtr lc, string file);
+        public static extern void linphone_core_set_ring ([In, Out] IntPtr lc, [In] string file);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_remote_ringback_tone (IntPtr lc, string file);
+        public static extern void linphone_core_set_remote_ringback_tone ([In, Out] IntPtr lc, [In] string file);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_set_ringback (IntPtr lc, string file);
+        public static extern void linphone_core_set_ringback ([In, Out] IntPtr lc, [In] string file);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_reload_sound_devices (IntPtr lc);
+        public static extern void linphone_core_reload_sound_devices ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_core_sound_device_can_capture (IntPtr lc, string device);
+        public static extern bool linphone_core_sound_device_can_capture ([In, Out] IntPtr lc, [In] string device);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_core_sound_device_can_playback (IntPtr lc, string device);
+        public static extern bool linphone_core_sound_device_can_playback ([In, Out] IntPtr lc, [In] string device);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_get_ringer_device (IntPtr lc);
+        public static extern IntPtr linphone_core_get_ringer_device ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_get_playback_device (IntPtr lc);
+        public static extern IntPtr linphone_core_get_playback_device ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_get_capture_device (IntPtr lc);
+        public static extern IntPtr linphone_core_get_capture_device ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_set_ringer_device (IntPtr lc, string devid);
+        public static extern int linphone_core_set_ringer_device ([In, Out] IntPtr lc, [In] string devid);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_set_playback_device (IntPtr lc, string devid);
+        public static extern int linphone_core_set_playback_device ([In, Out] IntPtr lc, [In] string devid);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_core_set_capture_device (IntPtr lc, string devid);
+        public static extern int linphone_core_set_capture_device ([In, Out] IntPtr lc, [In] string devid);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_core_enable_mic (IntPtr lc, bool enable);
+        public static extern void linphone_core_enable_mic ([In, Out] IntPtr lc, [In] bool enable);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_core_mic_enabled (IntPtr lc);
+        public static extern bool linphone_core_mic_enabled ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_get_sound_devices (IntPtr lc);
+        public static extern IntPtr linphone_core_get_sound_devices ([In, Out] IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern bool linphone_payload_type_enabled ([In] IntPtr pt);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int linphone_payload_type_enable ([In, Out] IntPtr pt, [In] bool enabled);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_core_get_audio_payload_types ([In, Out] IntPtr lc);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_payload_type_get_mime_type ([In] IntPtr pt);
 
         #endregion
 
@@ -721,19 +740,19 @@ namespace sipdotnet
         // http://www.linphone.org/docs/liblinphone/group__chatroom.html
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_core_get_chat_room_from_uri (IntPtr lc, string to);
+        public static extern IntPtr linphone_core_get_chat_room_from_uri ([In, Out] IntPtr lc, [In] string to);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void linphone_chat_room_send_chat_message (IntPtr chatroom, IntPtr chatmessage);
+        public static extern void linphone_chat_room_send_chat_message ([In, Out] IntPtr chatroom, [In, Out] IntPtr chatmessage);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_chat_room_create_message (IntPtr chatroom, string chatmessage);
+        public static extern IntPtr linphone_chat_room_create_message ([In, Out] IntPtr chatroom, [In] string chatmessage);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_chat_room_get_peer_address (IntPtr chatroom);
+        public static extern IntPtr linphone_chat_room_get_peer_address ([In, Out] IntPtr chatroom);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_chat_message_get_text (IntPtr chatmessage);
+        public static extern IntPtr linphone_chat_message_get_text ([In] IntPtr chatmessage);
 
         #endregion
 

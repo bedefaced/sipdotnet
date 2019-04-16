@@ -60,6 +60,7 @@ namespace sipdotnet
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LinphoneCoreCbsMessageReceivedCb (IntPtr lc, IntPtr room, IntPtr message);
 
+        private const int MillisecondsLoopTime = 1000; // recommended value from linphone/include/linphone/core.h
         static LogEventCb logevent_cb;
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
@@ -332,6 +333,28 @@ namespace sipdotnet
             return devList;
         }
 
+        public List<string> GetAudioCodecs ()
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+                throw new InvalidOperationException("linphoneCore not started");
+
+            List<string> codecList = new List<string>();
+            
+            IntPtr listPtr = linphone_core_get_audio_payload_types(linphoneCore);
+
+            while (listPtr != IntPtr.Zero)
+            {
+                bctbx_list list = (bctbx_list) Marshal.PtrToStructure(listPtr, typeof(bctbx_list));
+                IntPtr payload = list.data;
+                IntPtr mime = linphone_payload_type_get_mime_type(payload);
+                codecList.Add(Marshal.PtrToStringAnsi(mime));
+                linphone_payload_type_enable(payload, true);
+                listPtr = list.next;
+            }
+
+            return codecList;
+        }
+
 #if (DEBUG)
         static LinphoneWrapper ()
         {
@@ -484,7 +507,7 @@ namespace sipdotnet
             while (running)
             {
                 linphone_core_iterate(linphoneCore); // roll
-                System.Threading.Thread.Sleep(100);
+                System.Threading.Thread.Sleep(MillisecondsLoopTime);
             }
 
             linphone_nat_policy_unref (natPolicy);

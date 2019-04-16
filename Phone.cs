@@ -593,6 +593,18 @@ namespace sipdotnet
             }
         }
 
+        public List<String> AvailableAudioCodecs
+        {
+            get
+            {
+                if (linphone == null)
+                    throw new InvalidOperationException("phone not connected");
+
+                return linphone.GetAudioCodecs();
+            }
+            
+        }
+
     }
 }
 
