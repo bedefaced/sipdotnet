@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if (DEBUG)
 using System.Diagnostics;
+#endif
 
 namespace sipdotnet
 {
@@ -171,8 +173,10 @@ namespace sipdotnet
 
 		public Phone (Account account)
 		{
-			Debug.Assert (null != account, "Phone requires an Account to make calls.");
-			this.account = account;
+#if (DEBUG)
+            Debug.Assert (null != account, "Phone requires an Account to make calls.");
+#endif
+            this.account = account;
 			linphone = new LinphoneWrapper ();
 			linphone.RegistrationStateChangedEvent += (LinphoneRegistrationState state) => {
 				switch (state) {

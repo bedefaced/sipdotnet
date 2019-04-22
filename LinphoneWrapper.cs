@@ -4,11 +4,49 @@ using System.Threading;
 using System.Collections.Generic;
 using static sipdotnet.Linphone;
 using System.Reflection;
+using System.Collections.Concurrent;
+#if (DEBUG)
+using System.Diagnostics;
+#endif
 
 namespace sipdotnet
 {
     class LinphoneWrapper
     {
+        class ProducerConsumerQueue<T> : BlockingCollection<T>
+        {
+            /// <summary>
+            /// Initializes a new instance of the ProducerConsumerQueue, Use Add and TryAdd for Enqueue and TryEnqueue and Take and TryTake for Dequeue and TryDequeue functionality
+            /// </summary>
+            public ProducerConsumerQueue ()
+                : base(new ConcurrentQueue<T>())
+            {
+            }
+
+            /// <summary>
+            /// Initializes a new instance of the ProducerConsumerQueue, Use Add and TryAdd for Enqueue and TryEnqueue and Take and TryTake for Dequeue and TryDequeue functionality
+            /// </summary>
+            /// <param name="maxSize"></param>
+            public ProducerConsumerQueue (int maxSize)
+                : base(new ConcurrentQueue<T>(), maxSize)
+            {
+            }
+
+        }
+
+        class NativeCallTask
+        {
+            public bool IsCompleted { get; set; }
+            public Object ResultObject { get; set; }
+            public Func<Object> FunctionCode { get; set; }
+
+            public NativeCallTask(Func<Object> function)
+            {
+                IsCompleted = false;
+                FunctionCode = function;
+            }
+        }
+
         class LinphoneCall : Call
         {
             IntPtr linphoneCallPtr;
@@ -60,7 +98,7 @@ namespace sipdotnet
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LinphoneCoreCbsMessageReceivedCb (IntPtr lc, IntPtr room, IntPtr message);
 
-        private const int MillisecondsLoopTime = 1000; // recommended value from linphone/include/linphone/core.h
+        private const int MillisecondsLoopTime = 20; // recommended value from linphone/include/linphone/core.h
         static LogEventCb logevent_cb;
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
@@ -86,6 +124,11 @@ namespace sipdotnet
         public delegate void MessageReceivedDelegate (string from, string message);
         public event MessageReceivedDelegate MessageReceivedEvent;
 
+        AutoResetEvent dequeueAutoReset = new AutoResetEvent(false);
+        ProducerConsumerQueue<NativeCallTask> LinphoneNativeCallsQueue = new ProducerConsumerQueue<NativeCallTask>();
+
+        static LinphoneWrapper lastCreatedLinphoneWrapper;
+
         private static bool logsEnabled = false;
         public static bool LogsEnabled { get => logsEnabled; set => logsEnabled = value; }
         public delegate void LogDelegate (string message);
@@ -96,13 +139,22 @@ namespace sipdotnet
             {
                 if (logEventHandler == null && LogsEnabled)
                 {
-                    linphone_core_set_log_level(OrtpLogLevel.DEBUG);
+                    lastCreatedLinphoneWrapper.NativeFunctionCall(() =>
+                    {
+                        linphone_core_set_log_level(OrtpLogLevel.DEBUG);
+                        return null;
+                    }, false); // mb no active linphone
+
                     if (logevent_cb == null)
                     {
                         logevent_cb = new LogEventCb(LinphoneLogEvent);
                     }
 
-                    linphone_core_set_log_handler(Marshal.GetFunctionPointerForDelegate(logevent_cb));
+                    lastCreatedLinphoneWrapper.NativeFunctionCall(() =>
+                    {
+                        linphone_core_set_log_handler(Marshal.GetFunctionPointerForDelegate(logevent_cb));
+                        return null;
+                    }, false); // mb no active linphone
                 }
                 logEventHandler += value;
             }
@@ -112,16 +164,24 @@ namespace sipdotnet
                 logEventHandler -= value;
                 if (logEventHandler == null)
                 {
-                    linphone_core_set_log_level(OrtpLogLevel.END);
+                    lastCreatedLinphoneWrapper.NativeFunctionCall(() =>
+                    {
+                        linphone_core_set_log_level(OrtpLogLevel.END);
+                        return null;
+                    }, false); // mb no active linphone
                 }
             }
         }
 
         static void LinphoneLogEvent (string domain, OrtpLogLevel lev, string fmt, IntPtr args)
         {
-            logEventHandler?.Invoke(DllLoadUtils.ProcessVAlist(fmt, args));
-        }
+            string message = DllLoadUtils.ProcessVAlist(fmt, args);
 
+            ThreadPool.QueueUserWorkItem(unused =>
+            {
+                logEventHandler?.Invoke(message);
+            });
+        }
 
         LinphoneCall FindCall (IntPtr call)
         {
@@ -130,29 +190,23 @@ namespace sipdotnet
             });
         }
 
-        void SetTimeout (Action callback, int miliseconds)
-        {
-            System.Timers.Timer timeout = new System.Timers.Timer();
-            timeout.Interval = miliseconds;
-            timeout.AutoReset = false;
-            timeout.Elapsed += (object sender, System.Timers.ElapsedEventArgs e) => {
-                callback();
-            };
-            timeout.Start();
-        }
-
         IntPtr createDefaultCallParams ()
         {
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-            IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
-            callParams = linphone_call_params_ref(callParams);
-            linphone_call_params_enable_video(callParams, false);
-            linphone_call_params_enable_audio(callParams, true);
-            linphone_call_params_enable_early_media_sending(callParams, true);
+           IntPtr result = (IntPtr) NativeFunctionCall(() =>
+           {
+               IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
+               callParams = linphone_call_params_ref(callParams);
+               linphone_call_params_enable_video(callParams, false);
+               linphone_call_params_enable_audio(callParams, true);
+               linphone_call_params_enable_early_media_sending(callParams, true);
 
-            return callParams;
+               return callParams;
+           }, true);
+
+            return result;
         }
 
         public bool MicrophoneEnabled
@@ -162,7 +216,10 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                return linphone_core_mic_enabled(linphoneCore);
+                return (bool) NativeFunctionCall(() =>
+                {
+                    return linphone_core_mic_enabled(linphoneCore);
+                }, true);
             }
 
             set
@@ -170,7 +227,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_enable_mic(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_enable_mic(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -181,7 +242,10 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                return linphone_core_keep_alive_enabled(linphoneCore);
+                return (bool) NativeFunctionCall(() =>
+                {
+                    return linphone_core_keep_alive_enabled(linphoneCore);
+                }, true);
             }
 
             set
@@ -189,7 +253,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_enable_keep_alive(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_enable_keep_alive(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -200,7 +268,10 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                return linphone_core_echo_cancellation_enabled(linphoneCore);
+                return (bool) NativeFunctionCall(() =>
+                {
+                    return linphone_core_echo_cancellation_enabled(linphoneCore);
+                }, true);
             }
 
             set
@@ -208,7 +279,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_enable_echo_cancellation(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_enable_echo_cancellation(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -219,9 +294,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                IntPtr devChar = linphone_core_get_ringer_device(linphoneCore);
-
-                return Marshal.PtrToStringAnsi(devChar);
+                return (string) NativeFunctionCall(() =>
+                {
+                    IntPtr devChar = linphone_core_get_ringer_device(linphoneCore);
+                    return Marshal.PtrToStringAnsi(devChar);
+                }, true);
             }
 
             set
@@ -229,7 +306,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_set_ringer_device(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_set_ringer_device(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -240,9 +321,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                IntPtr devChar = linphone_core_get_playback_device(linphoneCore);
-
-                return Marshal.PtrToStringAnsi(devChar);
+                return (string) NativeFunctionCall(() =>
+                {
+                    IntPtr devChar = linphone_core_get_playback_device(linphoneCore);
+                    return Marshal.PtrToStringAnsi(devChar);
+                }, true);
             }
 
             set
@@ -250,7 +333,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_set_playback_device(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_set_playback_device(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -261,9 +348,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                IntPtr devChar = linphone_core_get_capture_device(linphoneCore);
-
-                return Marshal.PtrToStringAnsi(devChar);
+                return (string) NativeFunctionCall(() =>
+                {
+                    IntPtr devChar = linphone_core_get_capture_device(linphoneCore);
+                    return Marshal.PtrToStringAnsi(devChar);
+                }, true);
             }
 
             set
@@ -271,7 +360,11 @@ namespace sipdotnet
                 if (linphoneCore == IntPtr.Zero || !running)
                     throw new InvalidOperationException("linphoneCore not started");
 
-                linphone_core_set_capture_device(linphoneCore, value);
+                NativeFunctionCall(() =>
+                {
+                    linphone_core_set_capture_device(linphoneCore, value);
+                    return null;
+                }, true);
             }
         }
 
@@ -280,28 +373,32 @@ namespace sipdotnet
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-            List<string> devList = new List<string>();
-
-            linphone_core_reload_sound_devices(linphoneCore);
-
-            IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
-
-            if (listPtr != IntPtr.Zero)
+            return (List<string>) NativeFunctionCall(() =>
             {
-                IntPtr ptr = Marshal.ReadIntPtr(listPtr);
-                while (ptr != IntPtr.Zero)
+                List<string> devList = new List<string>();
+
+                linphone_core_reload_sound_devices(linphoneCore);
+
+                IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
+
+                if (listPtr != IntPtr.Zero)
                 {
-                    string device = Marshal.PtrToStringAnsi(ptr);
+                    IntPtr ptr = Marshal.ReadIntPtr(listPtr);
+                    while (ptr != IntPtr.Zero)
+                    {
+                        string device = Marshal.PtrToStringAnsi(ptr);
 
-                    if (linphone_core_sound_device_can_playback(linphoneCore, device))
-                        devList.Add(device);
+                        if (linphone_core_sound_device_can_playback(linphoneCore, device))
+                            devList.Add(device);
 
-                    listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
-                    ptr = Marshal.ReadIntPtr(listPtr);
+                        listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
+                        ptr = Marshal.ReadIntPtr(listPtr);
+                    }
                 }
-            }
 
-            return devList;
+                return devList;
+
+            }, true);
         }
 
         public List<string> GetCaptureDevices ()
@@ -309,28 +406,31 @@ namespace sipdotnet
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-            List<string> devList = new List<string>();
-
-            linphone_core_reload_sound_devices(linphoneCore);
-
-            IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
-
-            if (listPtr != IntPtr.Zero)
+            return (List<string>) NativeFunctionCall(() =>
             {
-                IntPtr ptr = Marshal.ReadIntPtr(listPtr);
-                while (ptr != IntPtr.Zero)
+                List<string> devList = new List<string>();
+
+                linphone_core_reload_sound_devices(linphoneCore);
+
+                IntPtr listPtr = linphone_core_get_sound_devices(linphoneCore);
+
+                if (listPtr != IntPtr.Zero)
                 {
-                    string device = Marshal.PtrToStringAnsi(ptr);
+                    IntPtr ptr = Marshal.ReadIntPtr(listPtr);
+                    while (ptr != IntPtr.Zero)
+                    {
+                        string device = Marshal.PtrToStringAnsi(ptr);
 
-                    if (linphone_core_sound_device_can_capture(linphoneCore, device))
-                        devList.Add(device);
+                        if (linphone_core_sound_device_can_capture(linphoneCore, device))
+                            devList.Add(device);
 
-                    listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
-                    ptr = Marshal.ReadIntPtr(listPtr);
+                        listPtr = new IntPtr(listPtr.ToInt64() + IntPtr.Size);
+                        ptr = Marshal.ReadIntPtr(listPtr);
+                    }
                 }
-            }
 
-            return devList;
+                return devList;
+            }, true);
         }
 
         public List<string> GetAudioCodecs ()
@@ -338,21 +438,24 @@ namespace sipdotnet
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-            List<string> codecList = new List<string>();
-            
-            IntPtr listPtr = linphone_core_get_audio_payload_types(linphoneCore);
-
-            while (listPtr != IntPtr.Zero)
+            return (List<string>) NativeFunctionCall(() =>
             {
-                bctbx_list list = (bctbx_list) Marshal.PtrToStructure(listPtr, typeof(bctbx_list));
-                IntPtr payload = list.data;
-                IntPtr mime = linphone_payload_type_get_mime_type(payload);
-                codecList.Add(Marshal.PtrToStringAnsi(mime));
-                linphone_payload_type_enable(payload, true);
-                listPtr = list.next;
-            }
+                List<string> codecList = new List<string>();
 
-            return codecList;
+                IntPtr listPtr = linphone_core_get_audio_payload_types(linphoneCore);
+
+                while (listPtr != IntPtr.Zero)
+                {
+                    bctbx_list list = (bctbx_list) Marshal.PtrToStructure(listPtr, typeof(bctbx_list));
+                    IntPtr payload = list.data;
+                    IntPtr mime = linphone_payload_type_get_mime_type(payload);
+                    codecList.Add(Marshal.PtrToStringAnsi(mime));
+                    linphone_payload_type_enable(payload, true);
+                    listPtr = list.next;
+                }
+
+                return codecList;
+            }, true);
         }
 
 #if (DEBUG)
@@ -374,6 +477,7 @@ namespace sipdotnet
 
         public LinphoneWrapper ()
         {
+            lastCreatedLinphoneWrapper = this;
             linphone_core_set_log_level(OrtpLogLevel.END);
         }
         
@@ -434,80 +538,127 @@ namespace sipdotnet
             Marshal.StructureToPtr(vtable, vtablePtr, false); 
 
             linphoneCore = linphone_core_new(vtablePtr, null, null, IntPtr.Zero);
-            
+
             coreLoop = new Thread(LinphoneMainLoop);
             coreLoop.IsBackground = false;
             coreLoop.Start();
 
-            t_config = new LCSipTransports()
-			{
-				udp_port = LC_SIP_TRANSPORT_RANDOM,
-				tcp_port = LC_SIP_TRANSPORT_RANDOM,
-				dtls_port = LC_SIP_TRANSPORT_RANDOM,
-				tls_port = LC_SIP_TRANSPORT_RANDOM
-			};
-			t_configPtr = Marshal.AllocHGlobal(Marshal.SizeOf(t_config));
-			Marshal.StructureToPtr (t_config, t_configPtr, false);
-			linphone_core_set_sip_transports (linphoneCore, t_configPtr);
-
-            linphone_core_set_user_agent (linphoneCore, agent, version);
-
-            identity = "sip:" + username + "@" + server;
-			server_addr = "sip:" + server + ":" + port.ToString();
-
-			auth_info = linphone_auth_info_new (username, null, password, null, null, null);
-			linphone_core_add_auth_info (linphoneCore, auth_info);
-
-            natPolicy = linphone_core_create_nat_policy (linphoneCore);
-            natPolicy = linphone_nat_policy_ref (natPolicy);
-            linphone_nat_policy_enable_stun (natPolicy, use_stun);
-            linphone_nat_policy_enable_turn (natPolicy, use_turn);
-            linphone_nat_policy_enable_ice (natPolicy, use_ice);
-            linphone_nat_policy_enable_upnp (natPolicy, use_upnp);
-            if (!string.IsNullOrEmpty(stun_server))
+            NativeFunctionCall(() =>
             {
-                linphone_nat_policy_set_stun_server (natPolicy, stun_server);
-                linphone_nat_policy_resolve_stun_server (natPolicy);
-            }
+                t_config = new LCSipTransports()
+                {
+                    udp_port = LC_SIP_TRANSPORT_RANDOM,
+                    tcp_port = LC_SIP_TRANSPORT_RANDOM,
+                    dtls_port = LC_SIP_TRANSPORT_RANDOM,
+                    tls_port = LC_SIP_TRANSPORT_RANDOM
+                };
+                t_configPtr = Marshal.AllocHGlobal(Marshal.SizeOf(t_config));
+                Marshal.StructureToPtr(t_config, t_configPtr, false);
+                linphone_core_set_sip_transports(linphoneCore, t_configPtr);
 
-            proxy_cfg = linphone_core_create_proxy_config (linphoneCore);
-			linphone_proxy_config_set_identity (proxy_cfg, identity);
-			linphone_proxy_config_set_server_addr (proxy_cfg, server_addr);
-			linphone_proxy_config_enable_register (proxy_cfg, true);
+                linphone_core_set_user_agent(linphoneCore, agent, version);
 
-            linphone_proxy_config_set_nat_policy (proxy_cfg, natPolicy);
+                identity = "sip:" + username + "@" + server;
+                server_addr = "sip:" + server + ":" + port.ToString();
 
-            linphone_core_add_proxy_config (linphoneCore, proxy_cfg);
-            linphone_core_set_default_proxy_config (linphoneCore, proxy_cfg);
+                auth_info = linphone_auth_info_new(username, null, password, null, null, null);
+                linphone_core_add_auth_info(linphoneCore, auth_info);
+
+                natPolicy = linphone_core_create_nat_policy(linphoneCore);
+                natPolicy = linphone_nat_policy_ref(natPolicy);
+                linphone_nat_policy_enable_stun(natPolicy, use_stun);
+                linphone_nat_policy_enable_turn(natPolicy, use_turn);
+                linphone_nat_policy_enable_ice(natPolicy, use_ice);
+                linphone_nat_policy_enable_upnp(natPolicy, use_upnp);
+                if (!string.IsNullOrEmpty(stun_server))
+                {
+                    linphone_nat_policy_set_stun_server(natPolicy, stun_server);
+                    linphone_nat_policy_resolve_stun_server(natPolicy);
+                }
+
+                proxy_cfg = linphone_core_create_proxy_config(linphoneCore);
+                linphone_proxy_config_set_identity(proxy_cfg, identity);
+                linphone_proxy_config_set_server_addr(proxy_cfg, server_addr);
+                linphone_proxy_config_enable_register(proxy_cfg, true);
+
+                linphone_proxy_config_set_nat_policy(proxy_cfg, natPolicy);
+
+                linphone_core_add_proxy_config(linphoneCore, proxy_cfg);
+                linphone_core_set_default_proxy_config(linphoneCore, proxy_cfg);
+
+                return null;
+
+            }, true);
         }
        
         public void DestroyPhone ()
 		{
-            RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationProgress); // disconnecting
+            ThreadPool.QueueUserWorkItem(unused =>
+            {
+                RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationProgress); // disconnecting
+            });
 
-            linphone_core_terminate_all_calls (linphoneCore);
+            NativeFunctionCall(() =>
+            {
+                linphone_core_terminate_all_calls(linphoneCore);
+                return null;
+            }, true);
 
-			SetTimeout (delegate {
+            NativeFunctionCall(() =>
+            {
+                if (linphone_proxy_config_is_registered(proxy_cfg))
+                {
+                    linphone_proxy_config_edit(proxy_cfg);
+                    linphone_proxy_config_enable_register(proxy_cfg, false);
+                    linphone_proxy_config_done(proxy_cfg);
+                }
 
-				if (linphone_proxy_config_is_registered (proxy_cfg)) {
-					linphone_proxy_config_edit (proxy_cfg);
-					linphone_proxy_config_enable_register (proxy_cfg, false);
-					linphone_proxy_config_done (proxy_cfg);
-				}
+                return null;
+            }, true);
 
-				SetTimeout (delegate {
-					running = false;
-				}, 5000);
+            running = false;
 
-			}, 2000);
-		}
+        }
+
+        Object NativeFunctionCall (Func<Object> function, bool waitForResult)
+        {
+            NativeCallTask task = new NativeCallTask(function);
+            LinphoneNativeCallsQueue.Add(task);
+            while (waitForResult && !task.IsCompleted)
+            {
+#if (DEBUG)
+                Debug.WriteLine("Waiting for task completion: " + task.FunctionCode.Method.ToString());
+#endif
+                dequeueAutoReset.WaitOne();
+            }
+#if (DEBUG)
+            Debug.WriteLine(task.FunctionCode.Method.ToString() + " completed!");
+#endif
+            return task.ResultObject;
+        }
 
         void LinphoneMainLoop()
         {
+            NativeCallTask task;
+            
             while (running)
             {
                 linphone_core_iterate(linphoneCore); // roll
-                System.Threading.Thread.Sleep(MillisecondsLoopTime);
+
+                if (LinphoneNativeCallsQueue.TryTake(out task, MillisecondsLoopTime))
+                {
+#if (DEBUG)
+                    Debug.WriteLine("Task taken: " + task.FunctionCode.Method.ToString());
+#endif
+                    task.ResultObject = task.FunctionCode();
+                    task.IsCompleted = true;
+                    dequeueAutoReset.Set();
+                }
+            }
+
+            while (LinphoneNativeCallsQueue.Count > 0)
+            {
+                LinphoneNativeCallsQueue.Take();
             }
 
             linphone_nat_policy_unref (natPolicy);
@@ -524,7 +675,10 @@ namespace sipdotnet
             identity = null;
             server_addr = null;
 
-            RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationCleared);
+            ThreadPool.QueueUserWorkItem(unused =>
+            {
+                RegistrationStateChangedEvent?.Invoke(LinphoneRegistrationState.LinphoneRegistrationCleared);
+            });
 
         }
         
@@ -535,34 +689,55 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall)call;
-            linphone_call_send_dtmfs (linphonecall.LinphoneCallPtr, dtmfs);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_call_send_dtmfs(linphonecall.LinphoneCallPtr, dtmfs);
+                return null;
+            }, true);
         }
 
         public void SetRingbackSound (string file)
         {
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
+                });
                 return;
             }
 
-            linphone_core_set_ringback (linphoneCore, file);
+            NativeFunctionCall(() =>
+            {
+                linphone_core_set_ringback(linphoneCore, file);
+                return null;
+            }, true);
         }
 
         public void SetIncomingRingSound (string file)
         {
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(null, "Cannot modify configuration when Linphone Core is not working.");
+                });
                 return;
             }
 
-            linphone_core_set_ring (linphoneCore, file);
+            NativeFunctionCall(() =>
+            {
+                linphone_core_set_ring(linphoneCore, file);
+                return null;
+            }, true);
         }
         
         public void TerminateCall (Call call)
@@ -571,12 +746,19 @@ namespace sipdotnet
 				throw new ArgumentNullException ("call");
 
 			if (linphoneCore == IntPtr.Zero || !running) {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
 			}
 
-			LinphoneCall linphonecall = (LinphoneCall) call;
-			linphone_core_terminate_call (linphoneCore, linphonecall.LinphoneCallPtr);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_core_terminate_call(linphoneCore, linphonecall.LinphoneCallPtr);
+                return null;
+            }, true);
         }
 
 		public void MakeCall (string uri)
@@ -587,26 +769,39 @@ namespace sipdotnet
 		public void MakeCallAndRecord (string uri, string filename, bool startRecordInstantly = true)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) {
-                ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(null, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
 			}
 
-            IntPtr callParams = createDefaultCallParams();
-
-            if (!string.IsNullOrEmpty(filename)) 
-                linphone_call_params_set_record_file (callParams, filename);
-
-            IntPtr call = linphone_core_invite_with_params (linphoneCore, uri, callParams);
-			if (call == IntPtr.Zero) {
-                ErrorEvent?.Invoke(null, "Cannot call.");
-                return;
-			}
-
-            linphone_call_ref(call);
-            if (startRecordInstantly)
+            NativeFunctionCall(() =>
             {
-                linphone_call_start_recording(call);
-            }
+                IntPtr callParams = createDefaultCallParams();
+
+                if (!string.IsNullOrEmpty(filename))
+                    linphone_call_params_set_record_file(callParams, filename);
+
+                IntPtr call = linphone_core_invite_with_params(linphoneCore, uri, callParams);
+                if (call == IntPtr.Zero)
+                {
+                    ThreadPool.QueueUserWorkItem(unused =>
+                    {
+                        ErrorEvent?.Invoke(null, "Cannot call.");
+                    });
+                    return null;
+                }
+
+                linphone_call_ref(call);
+                if (startRecordInstantly)
+                {
+                    linphone_call_start_recording(call);
+                }
+
+                return null;
+
+            }, true);
 		}
 
         public void StartRecording (Call call)
@@ -616,13 +811,20 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall)call;
-            if (!string.IsNullOrEmpty(linphonecall.Recordfile))
-                linphone_call_start_recording (linphonecall.LinphoneCallPtr);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                if (!string.IsNullOrEmpty(linphonecall.Recordfile))
+                    linphone_call_start_recording(linphonecall.LinphoneCallPtr);
+                return null;
+            }, true);
         }
 
         public void PauseRecording (Call call)
@@ -632,13 +834,20 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall)call;
-            if (!string.IsNullOrEmpty(linphonecall.Recordfile))
-                linphone_call_stop_recording (linphonecall.LinphoneCallPtr);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                if (!string.IsNullOrEmpty(linphonecall.Recordfile))
+                    linphone_call_stop_recording(linphonecall.LinphoneCallPtr);
+                return null;
+            }, true);
         }
 
         public void PauseCall (Call call)
@@ -648,12 +857,19 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_core_pause_call(linphoneCore, linphonecall.LinphoneCallPtr);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_core_pause_call(linphoneCore, linphonecall.LinphoneCallPtr);
+                return null;
+            }, true);
         }
 
         public void ResumeCall (Call call)
@@ -663,12 +879,19 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_core_resume_call(linphoneCore, linphonecall.LinphoneCallPtr);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_core_resume_call(linphoneCore, linphonecall.LinphoneCallPtr);
+                return null;
+            }, true);
         }
 
         public void RedirectCall (Call call, string redirect_uri)
@@ -678,12 +901,19 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_call_redirect(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_call_redirect(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+                return null;
+            }, true);
         }
 
         public void TransferCall (Call call, string redirect_uri)
@@ -693,12 +923,19 @@ namespace sipdotnet
 
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
             }
 
-            LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_call_transfer(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+            NativeFunctionCall(() =>
+            {
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_call_transfer(linphoneCore, linphonecall.LinphoneCallPtr, redirect_uri);
+                return null;
+            }, true);
         }
 
         public void ReceiveCallAndRecord (Call call, string filename, bool startRecordInstantly = true)
@@ -707,23 +944,32 @@ namespace sipdotnet
 				throw new ArgumentNullException ("call");
 
 			if (linphoneCore == IntPtr.Zero || !running) {
-                ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(call, "Cannot make or receive calls when Linphone Core is not working.");
+                });
                 return;
 			}
 
-			LinphoneCall linphonecall = (LinphoneCall) call;
-            linphone_call_ref(linphonecall.LinphoneCallPtr);
-
-            IntPtr callParams = createDefaultCallParams();
-
-            if (!string.IsNullOrEmpty(filename))
-                linphone_call_params_set_record_file (callParams, filename);
-
-            linphone_core_accept_call_with_params (linphoneCore, linphonecall.LinphoneCallPtr, callParams);
-            if (startRecordInstantly)
+            NativeFunctionCall(() =>
             {
-                linphone_call_start_recording(linphonecall.LinphoneCallPtr);
-            }
+                LinphoneCall linphonecall = (LinphoneCall) call;
+                linphone_call_ref(linphonecall.LinphoneCallPtr);
+
+                IntPtr callParams = createDefaultCallParams();
+
+                if (!string.IsNullOrEmpty(filename))
+                    linphone_call_params_set_record_file(callParams, filename);
+
+                linphone_core_accept_call_with_params(linphoneCore, linphonecall.LinphoneCallPtr, callParams);
+                if (startRecordInstantly)
+                {
+                    linphone_call_start_recording(linphonecall.LinphoneCallPtr);
+                }
+
+                return null;
+
+            }, true);
 		}
 
 		public void ReceiveCall (Call call)
@@ -735,28 +981,40 @@ namespace sipdotnet
         {
             if (linphoneCore == IntPtr.Zero || !running)
             {
-                ErrorEvent?.Invoke(null, "Cannot send messages when Linphone Core is not working.");
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    ErrorEvent?.Invoke(null, "Cannot send messages when Linphone Core is not working.");
+                });
                 return;
             }
 
-            IntPtr chat_room = linphone_core_get_chat_room_from_uri (linphoneCore, to);
-            IntPtr chat_message = linphone_chat_room_create_message (chat_room, message);
-            linphone_chat_room_send_chat_message(chat_room, chat_message);
+            NativeFunctionCall(() =>
+            {
+                IntPtr chat_room = linphone_core_get_chat_room_from_uri(linphoneCore, to);
+                IntPtr chat_message = linphone_chat_room_create_message(chat_room, message);
+                linphone_chat_room_send_chat_message(chat_room, chat_message);
+                return null;
+            }, true);
         }
 
 		void OnRegistrationChanged (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message) 
 		{
 			if (linphoneCore == IntPtr.Zero || !running) return;
             
-            logEventHandler?.Invoke("OnRegistrationChanged: " + cstate);
-
-            RegistrationStateChangedEvent?.Invoke(cstate);
+            ThreadPool.QueueUserWorkItem(unused =>
+            {
+                logEventHandler?.Invoke("OnRegistrationChanged: " + cstate);
+                RegistrationStateChangedEvent?.Invoke(cstate);
+            });
         }
 
 		void OnCallStateChanged (IntPtr lc, IntPtr call, LinphoneCallState cstate, string message)
 		{
 			if (linphoneCore == IntPtr.Zero || !running) return;
-            logEventHandler?.Invoke("OnCallStateChanged: " + cstate);
+            ThreadPool.QueueUserWorkItem(unused =>
+            {
+                logEventHandler?.Invoke("OnCallStateChanged: " + cstate);
+            });
 
             Call.CallState newstate = Call.CallState.None;
 			Call.CallType newtype = Call.CallType.None;
@@ -842,11 +1100,17 @@ namespace sipdotnet
 
 				calls.Add (existCall);
 
-                CallStateChangedEvent?.Invoke(existCall);
+                ThreadPool.QueueUserWorkItem(unused =>
+                {
+                    CallStateChangedEvent?.Invoke(existCall);
+                });
             } else {
 				if (existCall.State != newstate) {
 					existCall.SetCallState (newstate);
-                    CallStateChangedEvent?.Invoke(existCall);
+                    ThreadPool.QueueUserWorkItem(unused =>
+                    {
+                        CallStateChangedEvent?.Invoke(existCall);
+                    });
                 }
 			}
 
@@ -867,8 +1131,11 @@ namespace sipdotnet
 
                 if (addressStringPtr != IntPtr.Zero && chatmessage != IntPtr.Zero)
                 {
-                    MessageReceivedEvent?.Invoke(Marshal.PtrToStringAnsi(addressStringPtr),
+                    ThreadPool.QueueUserWorkItem(unused =>
+                    {
+                        MessageReceivedEvent?.Invoke(Marshal.PtrToStringAnsi(addressStringPtr),
                         Marshal.PtrToStringAnsi(chatmessage));
+                    });
                 }
             }
         }
