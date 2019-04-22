@@ -37,6 +37,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Codec.cs" />
     <Compile Include="DllLoadUtils.cs" />
     <Compile Include="Linphone.cs" />
     <Compile Include="NatPolicy.cs" />

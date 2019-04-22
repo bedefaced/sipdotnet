@@ -8,7 +8,7 @@ namespace sipdotnet
 {
 	public class Phone
 	{
-		public enum ConnectState 
+        public enum ConnectState 
 		{
 			Disconnected, // idle
 			Progress, // registering on server
@@ -170,8 +170,9 @@ namespace sipdotnet
 		}
 
 		LinphoneWrapper linphone;
+        List<AudioCodec> codeclist;
 
-		public Phone (Account account)
+        public Phone (Account account)
 		{
 #if (DEBUG)
             Debug.Assert (null != account, "Phone requires an Account to make calls.");
@@ -597,18 +598,22 @@ namespace sipdotnet
             }
         }
 
-        public List<String> AvailableAudioCodecs
+        public List<AudioCodec> AvailableAudioCodecs
         {
             get
             {
                 if (linphone == null)
                     throw new InvalidOperationException("phone not connected");
 
-                return linphone.GetAudioCodecs();
+                if (codeclist == null)
+                {
+                    codeclist = linphone.GetAudioCodecs();
+                }
+
+                return codeclist;
             }
             
         }
-
     }
 }
 

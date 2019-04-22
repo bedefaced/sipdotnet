@@ -86,6 +86,34 @@ namespace sipdotnet
             }
         }
 
+        class LinphoneAudioCodec : AudioCodec
+        {
+            LinphoneWrapper phoneWrapper;
+
+            public LinphoneAudioCodec (LinphoneWrapper phoneWrapper, string name, int clockrate, bool enabled) : base(name, clockrate, enabled)
+            {
+                this.phoneWrapper = phoneWrapper;
+            }
+
+            public override bool Enabled
+            {
+                get
+                {
+                    return this.enabled;
+                }
+                
+                set
+                {
+                    if (phoneWrapper.linphoneCore == null)
+                        throw new InvalidOperationException("phone not connected");
+
+                    phoneWrapper.ToggleAudioCodec(this, value);
+
+                    this.enabled = value;
+                }
+            }
+        }
+
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         delegate void LinphoneCoreRegistrationStateChangedCb (IntPtr lc, IntPtr cfg, LinphoneRegistrationState cstate, string message);
 
@@ -433,14 +461,31 @@ namespace sipdotnet
             }, true);
         }
 
-        public List<string> GetAudioCodecs ()
+        public void ToggleAudioCodec(AudioCodec codec, bool enabled)
         {
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-            return (List<string>) NativeFunctionCall(() =>
+            NativeFunctionCall(() =>
             {
-                List<string> codecList = new List<string>();
+                IntPtr lpt = linphone_core_get_payload_type(linphoneCore, codec.Name, codec.ClockRate, 
+                    LINPHONE_FIND_PAYLOAD_IGNORE_CHANNELS);
+
+                linphone_payload_type_enable(lpt, enabled);
+
+                return null;
+
+            }, true);
+        }
+
+        public List<AudioCodec> GetAudioCodecs ()
+        {
+            if (linphoneCore == IntPtr.Zero || !running)
+                throw new InvalidOperationException("linphoneCore not started");
+
+            return (List<AudioCodec>) NativeFunctionCall(() =>
+            {
+                List<AudioCodec> codecList = new List<AudioCodec>();
 
                 IntPtr listPtr = linphone_core_get_audio_payload_types(linphoneCore);
 
@@ -448,8 +493,10 @@ namespace sipdotnet
                 {
                     bctbx_list list = (bctbx_list) Marshal.PtrToStructure(listPtr, typeof(bctbx_list));
                     IntPtr payload = list.data;
-                    IntPtr mime = linphone_payload_type_get_mime_type(payload);
-                    codecList.Add(Marshal.PtrToStringAnsi(mime));
+                    string mime = Marshal.PtrToStringAnsi(linphone_payload_type_get_mime_type(payload));
+                    int clockrate = linphone_payload_type_get_clock_rate(payload);
+                    bool enabled = linphone_payload_type_enabled(payload);
+                    codecList.Add(new LinphoneAudioCodec(this, mime, clockrate, enabled));
                     linphone_payload_type_enable(payload, true);
                     listPtr = list.next;
                 }

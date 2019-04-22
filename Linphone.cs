@@ -63,6 +63,16 @@ namespace sipdotnet
         public const int LC_SIP_TRANSPORT_DONTBIND = -2;
 
         /// <summary>
+        /// Wildcard value used to ignore rate in search
+        /// </summary>
+        public const int LINPHONE_FIND_PAYLOAD_IGNORE_RATE = -1;
+
+        /// <summary>
+        /// Wildcard value used to ignore channel in search
+        /// </summary>
+        public const int LINPHONE_FIND_PAYLOAD_IGNORE_CHANNELS = -1;
+
+        /// <summary>
         /// Linphone core SIP transport ports
         /// http://www.linphone.org/docs/liblinphone/struct__LinphoneSipTransports.html
         /// </summary>
@@ -723,16 +733,23 @@ namespace sipdotnet
         public static extern IntPtr linphone_core_get_sound_devices ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool linphone_payload_type_enabled ([In] IntPtr pt);
+        public static extern bool linphone_payload_type_enabled ([In] IntPtr lpt);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int linphone_payload_type_enable ([In, Out] IntPtr pt, [In] bool enabled);
+        public static extern int linphone_payload_type_enable ([In, Out] IntPtr lpt, [In] bool enabled);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr linphone_core_get_audio_payload_types ([In, Out] IntPtr lc);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        public static extern IntPtr linphone_payload_type_get_mime_type ([In] IntPtr pt);
+        public static extern IntPtr linphone_payload_type_get_mime_type ([In] IntPtr lpt);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int linphone_payload_type_get_clock_rate ([In] IntPtr lpt);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_core_get_payload_type ([In, Out] IntPtr lc, [In] string type, [In] int rate, [In] int channels);
+
 
         #endregion
 
