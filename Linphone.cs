@@ -502,6 +502,9 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_proxy_config_set_nat_policy ([In, Out] IntPtr cfg, [In, Out] IntPtr policy);
 
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_proxy_config_set_expires ([In, Out] IntPtr config, [In] int expires);
+
         #endregion
 
         #region Network

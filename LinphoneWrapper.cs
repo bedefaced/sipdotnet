@@ -529,7 +529,7 @@ namespace sipdotnet
         }
         
         public void CreatePhone (string username, string password, string server, int port, string agent, string version,
-            bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server)
+            bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server, int expires = 3600)
 		{
             running = true;
 
@@ -626,6 +626,7 @@ namespace sipdotnet
                 proxy_cfg = linphone_core_create_proxy_config(linphoneCore);
                 linphone_proxy_config_set_identity(proxy_cfg, identity);
                 linphone_proxy_config_set_server_addr(proxy_cfg, server_addr);
+                linphone_proxy_config_set_expires(proxy_cfg, expires);
                 linphone_proxy_config_enable_register(proxy_cfg, true);
 
                 linphone_proxy_config_set_nat_policy(proxy_cfg, natPolicy);

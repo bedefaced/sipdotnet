@@ -169,7 +169,21 @@ namespace sipdotnet
 			}
 		}
 
-		LinphoneWrapper linphone;
+        int expires = 3600;
+
+        public int Expires
+        {
+            get
+            {
+                return expires;
+            }
+            set
+            {
+                expires = value;
+            }
+        }
+
+        LinphoneWrapper linphone;
         List<AudioCodec> codeclist;
 
         public Phone (Account account)
@@ -251,7 +265,7 @@ namespace sipdotnet
             {
                 connectState = ConnectState.Progress;
                 linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version,
-                    natPolicy.UseSTUN, natPolicy.UseTURN, natPolicy.UseICE, natPolicy.UseUPNP, natPolicy.Server);
+                    natPolicy.UseSTUN, natPolicy.UseTURN, natPolicy.UseICE, natPolicy.UseUPNP, natPolicy.Server, Expires);
             }
             else
                 ErrorEvent?.Invoke(null, Error.OrderError);
