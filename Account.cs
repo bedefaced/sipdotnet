@@ -60,8 +60,10 @@ namespace sipdotnet
 
         public Account(string username, string password, string server, int port)
 		{
+#if (DEBUG)
             Debug.Assert(!String.IsNullOrEmpty(username), "User cannot be empty.");
             Debug.Assert(!String.IsNullOrEmpty(server), "Server cannot be empty.");
+#endif
 
             this.username = username;
             this.password = password;

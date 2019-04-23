@@ -131,11 +131,10 @@ namespace sipdotnet
         LinphoneCoreRegistrationStateChangedCb registration_state_changed;
         LinphoneCoreCallStateChangedCb call_state_changed;
         LinphoneCoreCbsMessageReceivedCb message_received;
-        IntPtr linphoneCore, proxy_cfg, auth_info, t_configPtr, vtablePtr, natPolicy;
+        IntPtr linphoneCore, proxy_cfg, auth_info, t_configPtr, factory, cbs, natPolicy, config;
         Thread coreLoop;
         bool running = true;
         string identity, server_addr;
-        LinphoneCoreVTable vtable;
         LCSipTransports t_config;
 
         List<LinphoneCall> calls = new List<LinphoneCall>();
@@ -223,18 +222,13 @@ namespace sipdotnet
             if (linphoneCore == IntPtr.Zero || !running)
                 throw new InvalidOperationException("linphoneCore not started");
 
-           IntPtr result = (IntPtr) NativeFunctionCall(() =>
-           {
-               IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
-               callParams = linphone_call_params_ref(callParams);
-               linphone_call_params_enable_video(callParams, false);
-               linphone_call_params_enable_audio(callParams, true);
-               linphone_call_params_enable_early_media_sending(callParams, true);
+            IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
+            callParams = linphone_call_params_ref(callParams);
+            linphone_call_params_enable_video(callParams, false);
+            linphone_call_params_enable_audio(callParams, true);
+            linphone_call_params_enable_early_media_sending(callParams, true);
 
-               return callParams;
-           }, true);
-
-            return result;
+            return callParams;
         }
 
         public bool MicrophoneEnabled
@@ -529,68 +523,23 @@ namespace sipdotnet
         }
         
         public void CreatePhone (string username, string password, string server, int port, string agent, string version,
-            bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server, int expires = 3600)
+            bool use_stun, bool use_turn, bool use_ice, bool use_upnp, string stun_server, int expires = 3600, 
+            string configFile = null)
 		{
-            running = true;
-
+            factory = linphone_factory_get();
+            
+            cbs = linphone_factory_create_core_cbs(factory);
             registration_state_changed = new LinphoneCoreRegistrationStateChangedCb(OnRegistrationChanged);
             call_state_changed = new LinphoneCoreCallStateChangedCb(OnCallStateChanged);
             message_received = new LinphoneCoreCbsMessageReceivedCb(OnMessageReceived);
+            linphone_core_cbs_set_registration_state_changed(cbs, Marshal.GetFunctionPointerForDelegate(registration_state_changed));
+            linphone_core_cbs_set_call_state_changed(cbs, Marshal.GetFunctionPointerForDelegate(call_state_changed));
+            linphone_core_cbs_set_message_received(cbs, Marshal.GetFunctionPointerForDelegate(message_received));
 
-#pragma warning disable 0612
-            vtable = new LinphoneCoreVTable()
-            {
-                global_state_changed = IntPtr.Zero,
-                registration_state_changed = Marshal.GetFunctionPointerForDelegate(registration_state_changed),
-                call_state_changed = Marshal.GetFunctionPointerForDelegate(call_state_changed),
-                notify_presence_received = IntPtr.Zero,
-                notify_presence_received_for_uri_or_tel = IntPtr.Zero,
-                new_subscription_requested = IntPtr.Zero,
-                auth_info_requested = IntPtr.Zero,
-                authentication_requested = IntPtr.Zero,
-                call_log_updated = IntPtr.Zero,
-                message_received = Marshal.GetFunctionPointerForDelegate(message_received),
-                message_received_unable_decrypt = IntPtr.Zero,
-                is_composing_received = IntPtr.Zero,
-                dtmf_received = IntPtr.Zero,
-                refer_received = IntPtr.Zero,
-                call_encryption_changed = IntPtr.Zero,
-                transfer_state_changed = IntPtr.Zero,
-                buddy_info_updated = IntPtr.Zero,
-                call_stats_updated = IntPtr.Zero,
-                info_received = IntPtr.Zero,
-                subscription_state_changed = IntPtr.Zero,
-                notify_received = IntPtr.Zero,
-                publish_state_changed = IntPtr.Zero,
-                configuring_status = IntPtr.Zero,
-                display_status = IntPtr.Zero,
-                display_message = IntPtr.Zero,
-                display_warning = IntPtr.Zero,
-                display_url = IntPtr.Zero,
-                show = IntPtr.Zero,
-                text_received = IntPtr.Zero,
-                file_transfer_recv = IntPtr.Zero,
-                file_transfer_send = IntPtr.Zero,
-                file_transfer_progress_indication = IntPtr.Zero,
-                network_reachable = IntPtr.Zero,
-                log_collection_upload_state_changed = IntPtr.Zero,
-                log_collection_upload_progress_indication = IntPtr.Zero,
-                friend_list_created = IntPtr.Zero,
-                friend_list_removed = IntPtr.Zero,
-                user_data = IntPtr.Zero
-            };
-#pragma warning restore 0612
+            config = linphone_config_new(configFile); // if configFile is present will be created from file
+            linphoneCore = linphone_factory_create_core_with_config(factory, cbs, config);
 
-            vtablePtr = Marshal.AllocHGlobal(Marshal.SizeOf(vtable));
-            Marshal.StructureToPtr(vtable, vtablePtr, false); 
-
-            linphoneCore = linphone_core_new(vtablePtr, null, null, IntPtr.Zero);
-
-            coreLoop = new Thread(LinphoneMainLoop);
-            coreLoop.IsBackground = false;
-            coreLoop.Start();
-
-            NativeFunctionCall(() =>
+            if (configFile == null)
             {
                 t_config = new LCSipTransports()
                 {
@@ -633,10 +582,12 @@ namespace sipdotnet
 
                 linphone_core_add_proxy_config(linphoneCore, proxy_cfg);
                 linphone_core_set_default_proxy_config(linphoneCore, proxy_cfg);
+            } 
 
-                return null;
-
-            }, true);
+            running = true;
+            coreLoop = new Thread(LinphoneMainLoop);
+            coreLoop.IsBackground = false;
+            coreLoop.Start();
         }
        
         public void DestroyPhone ()
@@ -654,7 +605,7 @@ namespace sipdotnet
 
             NativeFunctionCall(() =>
             {
-                if (linphone_proxy_config_is_registered(proxy_cfg))
+                if (proxy_cfg != IntPtr.Zero && linphone_proxy_config_is_registered(proxy_cfg))
                 {
                     linphone_proxy_config_edit(proxy_cfg);
                     linphone_proxy_config_enable_register(proxy_cfg, false);
@@ -709,16 +660,14 @@ namespace sipdotnet
                 LinphoneNativeCallsQueue.Take();
             }
 
-            linphone_nat_policy_unref (natPolicy);
+            if (natPolicy != IntPtr.Zero) linphone_nat_policy_unref(natPolicy);
             linphone_core_unref(linphoneCore);
 
-            if (vtablePtr != IntPtr.Zero)
-                Marshal.FreeHGlobal(vtablePtr);
-            if (t_configPtr != IntPtr.Zero)
-                Marshal.FreeHGlobal(t_configPtr);
+            if (t_configPtr != IntPtr.Zero) Marshal.FreeHGlobal(t_configPtr);
             registration_state_changed = null;
             call_state_changed = null;
-            linphoneCore = proxy_cfg = auth_info = t_configPtr = IntPtr.Zero;
+            message_received = null;
+            linphoneCore = proxy_cfg = auth_info = t_configPtr = factory = cbs = config = IntPtr.Zero;
             coreLoop = null;
             identity = null;
             server_addr = null;

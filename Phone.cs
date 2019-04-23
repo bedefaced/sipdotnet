@@ -183,8 +183,81 @@ namespace sipdotnet
             }
         }
 
+        string configFile;
+
         LinphoneWrapper linphone;
         List<AudioCodec> codeclist;
+
+        void Initialize()
+        {
+            linphone = new LinphoneWrapper();
+            linphone.RegistrationStateChangedEvent += (LinphoneRegistrationState state) => {
+                switch (state)
+                {
+                    case LinphoneRegistrationState.LinphoneRegistrationProgress:
+                        connectState = ConnectState.Progress;
+                        break;
+
+                    case LinphoneRegistrationState.LinphoneRegistrationFailed:
+                        linphone.DestroyPhone();
+                        ErrorEvent?.Invoke(null, Error.RegisterFailed);
+                        break;
+
+                    case LinphoneRegistrationState.LinphoneRegistrationCleared:
+                        connectState = ConnectState.Disconnected;
+                        PhoneDisconnectedEvent?.Invoke();
+                        break;
+
+                    case LinphoneRegistrationState.LinphoneRegistrationOk:
+                        connectState = ConnectState.Connected;
+                        PhoneConnectedEvent?.Invoke();
+                        break;
+
+                    case LinphoneRegistrationState.LinphoneRegistrationNone:
+                    default:
+                        break;
+                }
+            };
+
+            linphone.ErrorEvent += (call, message) => {
+                Console.WriteLine("Error: {0}", message);
+                ErrorEvent?.Invoke(call, Error.UnknownError);
+            };
+
+            linphone.CallStateChangedEvent += (Call call) => {
+                Call.CallState state = call.State;
+
+                switch (state)
+                {
+                    case Call.CallState.Active:
+                        lineState = LineState.Busy;
+                        CallActiveEvent?.Invoke(call);
+                        break;
+
+                    case Call.CallState.Loading:
+                        lineState = LineState.Busy;
+                        if (call.Type == Call.CallType.Incoming)
+                            IncomingCallEvent?.Invoke(call);
+                        break;
+
+                    case Call.CallState.Error:
+                        this.lineState = LineState.Free;
+                        ErrorEvent?.Invoke(null, Error.CallError);
+                        break;
+
+                    case Call.CallState.Completed:
+                    default:
+                        this.lineState = LineState.Free;
+                        CallCompletedEvent?.Invoke(call);
+                        break;
+                }
+            };
+
+            linphone.MessageReceivedEvent += (string from, string message) =>
+            {
+                MessageReceivedEvent?.Invoke(from, message);
+            };
+        }
 
         public Phone (Account account)
 		{
@@ -192,80 +265,31 @@ namespace sipdotnet
             Debug.Assert (null != account, "Phone requires an Account to make calls.");
 #endif
             this.account = account;
-			linphone = new LinphoneWrapper ();
-			linphone.RegistrationStateChangedEvent += (LinphoneRegistrationState state) => {
-				switch (state) {
-					case LinphoneRegistrationState.LinphoneRegistrationProgress:
-						connectState = ConnectState.Progress;
-						break;
+            Initialize();
+        }
 
-					case LinphoneRegistrationState.LinphoneRegistrationFailed:
-                        linphone.DestroyPhone();
-                        ErrorEvent?.Invoke(null, Error.RegisterFailed);
-                        break;
-
-					case LinphoneRegistrationState.LinphoneRegistrationCleared:
-						connectState = ConnectState.Disconnected;
-                        PhoneDisconnectedEvent?.Invoke();
-                        break;
-
-					case LinphoneRegistrationState.LinphoneRegistrationOk:
-						connectState = ConnectState.Connected;
-                        PhoneConnectedEvent?.Invoke();
-                        break;
-
-					case LinphoneRegistrationState.LinphoneRegistrationNone:
-					default:
-						break;
-				}
-			};
-
-			linphone.ErrorEvent += (call, message) => {
-				Console.WriteLine ("Error: {0}", message);
-                ErrorEvent?.Invoke(call, Error.UnknownError);
-            };
-
-			linphone.CallStateChangedEvent += (Call call) => {
-				Call.CallState state = call.State;
-
-				switch (state) {
-				case Call.CallState.Active:
-					lineState = LineState.Busy;
-                        CallActiveEvent?.Invoke(call);
-                        break;
-
-				case Call.CallState.Loading:
-					lineState = LineState.Busy;
-					if (call.Type == Call.CallType.Incoming)
-                            IncomingCallEvent?.Invoke(call);
-                        break;
-
-                case Call.CallState.Error:
-                    this.lineState = LineState.Free;
-                        ErrorEvent?.Invoke(null, Error.CallError);
-                        break;
-
-				case Call.CallState.Completed:
-				default:
-					this.lineState = LineState.Free;
-                        CallCompletedEvent?.Invoke(call);
-                        break;
-				}
-			};
-
-            linphone.MessageReceivedEvent += (string from, string message) =>
-            {
-                MessageReceivedEvent?.Invoke(from, message);
-            };
-		}
+        public Phone (string configFile)
+        {
+#if (DEBUG)
+            Debug.Assert(null != configFile || !System.IO.File.Exists(configFile), "Phone requires an existing config file.");
+#endif
+            this.configFile = configFile;
+            Initialize();
+        }
 
         public void Connect(NatPolicy natPolicy)
         {
             if (connectState == ConnectState.Disconnected)
             {
                 connectState = ConnectState.Progress;
-                linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version,
-                    natPolicy.UseSTUN, natPolicy.UseTURN, natPolicy.UseICE, natPolicy.UseUPNP, natPolicy.Server, Expires);
+                if (configFile != null)
+                {
+                    linphone.CreatePhone(null, null, null, 0, null, null,false, false, false, false, null, 0, configFile);
+                } else
+                {
+                    linphone.CreatePhone(account.Username, Account.Password, Account.Server, Account.Port, Useragent, Version,
+                        natPolicy.UseSTUN, natPolicy.UseTURN, natPolicy.UseICE, natPolicy.UseUPNP, natPolicy.Server, Expires);
+                }
             }
             else
                 ErrorEvent?.Invoke(null, Error.OrderError);
