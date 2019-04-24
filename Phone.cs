@@ -70,10 +70,16 @@ namespace sipdotnet
 		public delegate void OnPhoneDisconnected ();
 
         /// <summary>
-        /// Phone is ringing
+        /// Incoming call occurs
         /// </summary>
         /// <param name="call"></param>
 		public delegate void OnIncomingCall (Call call);
+
+        /// <summary>
+        /// Outgoing call occurs
+        /// </summary>
+        /// <param name="call"></param>
+        public delegate void OnOutgoingCall (Call call);
 
         /// <summary>
         /// Link is established
@@ -109,7 +115,8 @@ namespace sipdotnet
         public event OnPhoneConnected PhoneConnectedEvent;
 		public event OnPhoneDisconnected PhoneDisconnectedEvent;
 		public event OnIncomingCall IncomingCallEvent;
-		public event OnCallActive CallActiveEvent;
+        public event OnOutgoingCall OutgoingCallEvent;
+        public event OnCallActive CallActiveEvent;
 		public event OnCallCompleted CallCompletedEvent;
         public event OnMessageReceived MessageReceivedEvent;
         public event OnError ErrorEvent;
@@ -238,6 +245,8 @@ namespace sipdotnet
                         lineState = LineState.Busy;
                         if (call.Type == Call.CallType.Incoming)
                             IncomingCallEvent?.Invoke(call);
+                        if (call.Type == Call.CallType.Outcoming)
+                            OutgoingCallEvent?.Invoke(call);
                         break;
 
                     case Call.CallState.Error:

@@ -231,7 +231,6 @@ namespace sipdotnet
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_log_level ([In, Out] OrtpLogLevel loglevel);
 
-        [Obsolete]
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_log_handler ([In, Out] IntPtr logfunc);
 
@@ -261,10 +260,6 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_set_default_proxy_config ([In, Out] IntPtr lc, [In, Out] IntPtr config);
-
-        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        [System.Obsolete]
-        public static extern int linphone_core_get_default_proxy ([In, Out] IntPtr lc, [In, Out] ref IntPtr config);
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern bool linphone_proxy_config_is_registered ([In] IntPtr config);
@@ -343,16 +338,6 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_transports_set_dtls_port ([In, Out] IntPtr transports, [In] int port);
-
-        #endregion
-
-        #region SIP
-
-        // http://www.linphone.org/docs/liblinphone/group__linphone__address.html
-
-        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
-        [System.Obsolete]
-        public static extern void linphone_address_destroy ([In, Out] IntPtr u);
 
         #endregion
 

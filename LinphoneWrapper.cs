@@ -216,11 +216,8 @@ namespace sipdotnet
             });
         }
 
-        IntPtr createDefaultCallParams ()
+        private IntPtr createDefaultCallParams ()
         {
-            if (linphoneCore == IntPtr.Zero || !running)
-                throw new InvalidOperationException("linphoneCore not started");
-
             IntPtr callParams = linphone_core_create_call_params(linphoneCore, IntPtr.Zero);
             callParams = linphone_call_params_ref(callParams);
             linphone_call_params_enable_video(callParams, false);
