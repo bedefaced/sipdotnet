@@ -73,32 +73,8 @@ namespace sipdotnet
         public const int LINPHONE_FIND_PAYLOAD_IGNORE_CHANNELS = -1;
 
         /// <summary>
-        /// Linphone core SIP transport ports
-        /// http://www.linphone.org/docs/liblinphone/struct__LinphoneSipTransports.html
+        /// Linphone doubly linked list
         /// </summary>
-		public struct LCSipTransports
-        {
-            /// <summary>
-            /// UDP port to listening on, negative value if not set
-            /// </summary>
-			public int udp_port;
-
-            /// <summary>
-            /// TCP port to listening on, negative value if not set
-            /// </summary>
-			public int tcp_port;
-
-            /// <summary>
-            /// DTLS port to listening on, negative value if not set
-            /// </summary>
-			public int dtls_port;
-
-            /// <summary>
-            /// TLS port to listening on, negative value if not set
-            /// </summary>
-			public int tls_port;
-        };
-
         public struct bctbx_list
         {
             public IntPtr next;
@@ -222,26 +198,6 @@ namespace sipdotnet
             /// The call object is no more retained by the core
             /// </summary>
             LinphoneCallReleased
-        };
-
-        /// <summary>
-        /// Policy to use to pass through NATs/firewalls.
-        /// https://github.com/BelledonneCommunications/linphone/blob/master/coreapi/private.h
-        /// </summary>
-        public struct LinphoneNatPolicy
-        {
-            public IntPtr baseObject;
-            public IntPtr user_data;
-            public IntPtr lc;
-            public IntPtr stun_resolver_context;
-            public IntPtr stun_addrinfo;
-            public IntPtr stun_server;
-            public IntPtr stun_server_username;
-            public IntPtr refObject;
-            public IntPtr stun_enabled;
-            public IntPtr turn_enabled;
-            public IntPtr ice_enabled;
-            public IntPtr upnp_enabled;
         };
 
         #region Initializing
@@ -372,6 +328,21 @@ namespace sipdotnet
 
         [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
         public static extern void linphone_core_enable_keep_alive ([In, Out] IntPtr lc, [In] bool enable);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr linphone_transports_new ();
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_transports_set_udp_port ([In, Out] IntPtr transports, [In] int port);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_transports_set_tcp_port ([In, Out] IntPtr transports, [In] int port);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_transports_set_tls_port ([In, Out] IntPtr transports, [In] int port);
+
+        [DllImport(LIBNAME, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void linphone_transports_set_dtls_port ([In, Out] IntPtr transports, [In] int port);
 
         #endregion
 

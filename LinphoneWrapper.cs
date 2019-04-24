@@ -135,7 +135,6 @@ namespace sipdotnet
         Thread coreLoop;
         bool running = true;
         string identity, server_addr;
-        LCSipTransports t_config;
 
         List<LinphoneCall> calls = new List<LinphoneCall>();
 
@@ -541,15 +540,11 @@ namespace sipdotnet
 
             if (configFile == null)
             {
-                t_config = new LCSipTransports()
-                {
-                    udp_port = LC_SIP_TRANSPORT_RANDOM,
-                    tcp_port = LC_SIP_TRANSPORT_RANDOM,
-                    dtls_port = LC_SIP_TRANSPORT_RANDOM,
-                    tls_port = LC_SIP_TRANSPORT_RANDOM
-                };
-                t_configPtr = Marshal.AllocHGlobal(Marshal.SizeOf(t_config));
-                Marshal.StructureToPtr(t_config, t_configPtr, false);
+                t_configPtr = linphone_transports_new();
+                linphone_transports_set_udp_port(t_configPtr, LC_SIP_TRANSPORT_RANDOM);
+                linphone_transports_set_tcp_port(t_configPtr, LC_SIP_TRANSPORT_RANDOM);
+                linphone_transports_set_tls_port(t_configPtr, LC_SIP_TRANSPORT_RANDOM);
+                linphone_transports_set_dtls_port(t_configPtr, LC_SIP_TRANSPORT_RANDOM);
                 linphone_core_set_sip_transports(linphoneCore, t_configPtr);
 
                 linphone_core_set_user_agent(linphoneCore, agent, version);
